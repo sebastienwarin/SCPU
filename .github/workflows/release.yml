@@ -17,6 +17,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Mark workspace as safe for Git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: bash software/scripts/validate-release-version.sh "${{ github.ref_name }}"
       - run: dotnet restore software/SCPU.sln -p:Platform="Any CPU"
       - run: dotnet build software/SCPU.sln --configuration Release --no-restore -p:Platform="Any CPU"
