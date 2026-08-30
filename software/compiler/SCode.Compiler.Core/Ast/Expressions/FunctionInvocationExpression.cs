@@ -92,7 +92,7 @@ namespace SCode.Compiler.Ast.Expressions
 
         public override TypeInfo GetResultType()
         {
-            CurrentScope.ReservedIdentifiers.TryGetValue(Identifier, out var functionDeclaration);
+            CurrentScope.TryGetIdentifier(Identifier, out var functionDeclaration);
             return functionDeclaration?.DataType ?? TypeInfo.Empty;
         }
 

@@ -64,7 +64,7 @@ namespace SCode.Compiler.Ast.Expressions
 
         public override TypeInfo GetResultType()
         {
-            CurrentScope.ReservedIdentifiers.TryGetValue(Identifier, out var thing);
+            CurrentScope.TryGetIdentifier(Identifier, out var thing);
             return thing?.DataType ?? TypeInfo.Empty;
         }
 

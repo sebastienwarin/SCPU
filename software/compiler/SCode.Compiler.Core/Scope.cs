@@ -13,22 +13,13 @@ namespace SCode.Compiler
         public Scope? ParentScope { get; private set; }
         public bool IsGlobalScope => ParentScope == null;
 
-        public event EventHandler<IdentifierRegisteredEventArgs>? NewIdentifierRegistered;
-        public Dictionary<string, IdentifierInfo> ReservedIdentifiers { get; } = [];
+        /// <summary>Identifiers declared in this very scope. Enclosing scopes are resolved by <see cref="TryGetIdentifier(string, out IdentifierInfo)"/>.</summary>
+        private Dictionary<string, IdentifierInfo> ReservedIdentifiers { get; } = [];
 
         private Scope(CompilationContext compilationContext, Scope? parentScope = null)
         {
             Context = compilationContext;
             ParentScope = parentScope;
-            if (ParentScope != null)
-            {
-                ReservedIdentifiers = new Dictionary<string, IdentifierInfo>(ParentScope.ReservedIdentifiers);
-                ParentScope.NewIdentifierRegistered += (s, e) =>
-                {
-                    ReservedIdentifiers[e.Key] = e.Info;
-                    NewIdentifierRegistered?.Invoke(s, e);
-                };
-            }
         }
 
         public Scope CreateChildScope()
@@ -40,54 +31,61 @@ namespace SCode.Compiler
         {
             var key = identifier.Name;
 
-            // Check existing identifiers
-            if (ReservedIdentifiers.TryGetValue(key, out var existingValue) &&
-                (IsGlobalScope || existingValue.SourceNode?.CurrentScope == sourceNode?.CurrentScope || !CanReplace(type, existingValue.Type)))
+            // Already declared in this very scope
+            if (ReservedIdentifiers.ContainsKey(key))
             {
                 return false;
             }
-            else
+
+            // Declared in an enclosing scope : shadowing is allowed for some identifier kinds only
+            if (TryGetIdentifier(key, out var inheritedValue) && !CanReplace(type, inheritedValue.Type))
             {
-                // Add identifier to the current scope and child's scopes
-                ReservedIdentifiers[key] = new IdentifierInfo(identifier.Name, type, dataType, sourceNode);
-                NewIdentifierRegistered?.Invoke(this, new IdentifierRegisteredEventArgs
-                {
-                    Key = key,
-                    Info = ReservedIdentifiers[key]
-                });
-
-                // For local variable in function
-                if (type == IdentifierInfo.IdentifierType.Variable &&
-                    sourceNode is VariableDeclarator variableDeclarator &&
-                    !variableDeclarator.IsGlobalOrStatic)
-                {
-                    var functionDeclaration = variableDeclarator.GetFirstAncestor<FunctionDeclarationStatement>();
-                    if (functionDeclaration != null)
-                    {
-                        // Calcul the variable offset from the FP
-                        variableDeclarator.Offset = functionDeclaration.LocalVariables.Sum(x => x.Size) + 1;
-                        // Register the local variable
-                        functionDeclaration.LocalVariables.Add(variableDeclarator);
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException("A non-global variable must be a child of a function statement");
-                    }
-                }
-
-                // Done
-                return true;
+                return false;
             }
+
+            // Add identifier to the current scope
+            ReservedIdentifiers[key] = new IdentifierInfo(identifier.Name, type, dataType, sourceNode);
+
+            // For local variable in function
+            if (type == IdentifierInfo.IdentifierType.Variable &&
+                sourceNode is VariableDeclarator variableDeclarator &&
+                !variableDeclarator.IsGlobalOrStatic)
+            {
+                var functionDeclaration = variableDeclarator.GetFirstAncestor<FunctionDeclarationStatement>();
+                if (functionDeclaration != null)
+                {
+                    // Calcul the variable offset from the FP
+                    variableDeclarator.Offset = functionDeclaration.LocalVariables.Sum(x => x.Size) + 1;
+                    // Register the local variable
+                    functionDeclaration.LocalVariables.Add(variableDeclarator);
+                }
+                else
+                {
+                    throw new InvalidOperationException("A non-global variable must be a child of a function statement");
+                }
+            }
+
+            // Done
+            return true;
         }
 
         public bool TryGetIdentifier(string key, out IdentifierInfo result)
         {
-            return ReservedIdentifiers.TryGetValue(key, out result);
+            for (var scope = this; scope != null; scope = scope.ParentScope)
+            {
+                if (scope.ReservedIdentifiers.TryGetValue(key, out result))
+                {
+                    return true;
+                }
+            }
+
+            result = null!;
+            return false;
         }
 
         public bool TryGetIdentifier(Identifier identifier, out IdentifierInfo result)
         {
-            return ReservedIdentifiers.TryGetValue(identifier.Name, out result);
+            return TryGetIdentifier(identifier.Name, out result);
         }
 
         public static Scope CreateGlobalScope(CompilationContext compilationContext)
@@ -119,11 +117,5 @@ namespace SCode.Compiler
                 return false;
             }
         }
-    }
-
-    public class IdentifierRegisteredEventArgs : EventArgs
-    {
-        public string Key { get; set; }
-        public IdentifierInfo Info { get; set; }
     }
 }
