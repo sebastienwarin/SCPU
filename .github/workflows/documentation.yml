@@ -1,0 +1,20 @@
+name: Build documentation PDF
+
+on:
+  push:
+    branches: [main]
+    paths: ["**/*.md", "docs/**", ".github/workflows/documentation.yml"]
+  workflow_dispatch:
+
+jobs:
+  documentation:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PDF tools
+        run: sudo apt-get update && sudo apt-get install -y pandoc weasyprint fonts-dejavu fonts-liberation fonts-noto-color-emoji
+      - name: Build documentation PDF
+        run: chmod +x docs/build-pdf.sh && docs/build-pdf.sh
+      - run: test -s artifacts/documentation/S-CPU-Documentation.pdf

@@ -12,7 +12,7 @@ version="${tag#v}"
 configuration="Release"
 artifacts_dir="$(pwd)/artifacts/release"
 publish_root="$(pwd)/artifacts/publish"
-source_revision="${GITEA_SHA:-${GITHUB_SHA:-unknown}}"
+source_revision="${GITHUB_SHA:-unknown}"
 source_revision="${source_revision:0:10}"
 
 if [[ ! -f "software/SCPU.sln" || ! -f "software/Directory.Build.props" ]]; then

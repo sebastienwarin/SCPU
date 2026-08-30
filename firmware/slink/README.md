@@ -205,7 +205,7 @@ pio run --target uploadfs
 pio device monitor
 ```
 
-Automatic validation runs through Gitea Actions on push and pull request via [.gitea/workflows/platformio-ci.yml](.gitea/workflows/platformio-ci.yml).
+Automatic validation runs through GitHub Actions on push and pull request via [.github/workflows/platformio-ci.yml](../../.github/workflows/platformio-ci.yml).
 
 ## Under the Hood
 

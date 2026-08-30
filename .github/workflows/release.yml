@@ -1,0 +1,35 @@
+name: Software Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build-test-package-release:
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/dotnet/sdk:10.0
+    steps:
+      - name: Install build and packaging tools
+        run: apt-get update && apt-get install --yes --no-install-recommends curl fonts-dejavu fonts-liberation fonts-noto-color-emoji git gh pandoc weasyprint zip
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash software/scripts/validate-release-version.sh "${{ github.ref_name }}"
+      - run: dotnet restore software/SCPU.sln -p:Platform="Any CPU"
+      - run: dotnet build software/SCPU.sln --configuration Release --no-restore -p:Platform="Any CPU"
+      - run: dotnet test software/SCPU.sln --configuration Release --no-build --no-restore -p:Platform="Any CPU" --logger "console;verbosity=normal"
+      - run: bash software/scripts/package-release.sh "${{ github.ref_name }}"
+      - name: Build documentation PDF and checksums
+        run: |
+          version="${{ github.ref_name }}"; version="${version#v}"
+          bash docs/build-pdf.sh "artifacts/release/scpu-documentation-$version.pdf" "$version"
+          (cd artifacts/release && sha256sum ./*.zip ./*.pdf > SHA256SUMS)
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${{ github.ref_name }}"; version="${version#v}"
+          gh release create "${{ github.ref_name }}" artifacts/release/* --title "S-CPU Toolchain $version" --generate-notes
