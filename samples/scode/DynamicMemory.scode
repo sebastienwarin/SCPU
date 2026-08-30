@@ -1,0 +1,87 @@
+// =============================================================================
+// S-CODE SAMPLE - DYNAMIC MEMORY
+// =============================================================================
+// What it does:
+//   Exercises the heap allocator provided by "core/Memory": allocation,
+//   read/write through pointers, block reuse after a free, coalescing of
+//   adjacent free blocks, calloc and realloc.
+// Expected result:
+//   The terminal prints:
+//     heap start = <address of the first heap word>
+//     a = 4660,43605
+//     b reuses a = 1
+//     merged = 7
+//     calloc = 0,0,0
+//     realloc = 1,2,3
+// Runs on:
+//   Desktop/CLI simulators and S-CPU targets with the TTY device.
+// Demonstrates:
+//   The built-in __heap_start / __heap_end symbols, malloc/free/calloc/realloc,
+//   pointer dereference assignment and block reuse.
+// =============================================================================
+
+#include "core/Print"
+#include "core/Memory"
+#include "drivers/TTY"
+
+Print("heap start = ");
+PrintNumber(heap_base);
+Print("\n");
+
+// --- Basic allocation and write through pointers ---------------------------
+int* a = malloc(2);
+*a = 0x1234;
+*(a + 1) = 0xAA55;
+
+Print("a = ");
+PrintNumber(*a);
+Print(",");
+PrintNumber(*(a + 1));
+Print("\n");
+
+// --- Freeing a block makes it reusable -------------------------------------
+free(a);
+int* b = malloc(2);
+
+Print("b reuses a = ");
+PrintNumber(b == a ? 1 : 0);
+Print("\n");
+
+// --- Adjacent free blocks are merged ---------------------------------------
+int* c = malloc(4);
+free(b);
+free(c);
+
+// b and c are now a single free block: 2 + 4 payload words plus c's header.
+int* merged = malloc(7);
+
+Print("merged = ");
+PrintNumber(msize(merged));
+Print("\n");
+free(merged);
+
+// --- calloc returns zeroed memory ------------------------------------------
+int* zeroed = calloc(3);
+
+Print("calloc = ");
+for (int i = 0; i < 3; i++) {
+  if (i > 0) { Print(","); }
+  PrintNumber(*(zeroed + i));
+}
+Print("\n");
+free(zeroed);
+
+// --- realloc grows a block and preserves its content ------------------------
+int* grown = malloc(3);
+for (int j = 0; j < 3; j++) {
+  *(grown + j) = j + 1;
+}
+grown = realloc(grown, 8);
+
+Print("realloc = ");
+for (int k = 0; k < 3; k++) {
+  if (k > 0) { Print(","); }
+  PrintNumber(*(grown + k));
+}
+Print("\n");
+free(grown);

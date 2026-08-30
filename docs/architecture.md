@@ -284,8 +284,16 @@ instruction would overwrite the rewritten instruction before it could execute.
 
 Indirect addressing is also essential to the S-CPU stack model. `SP` holds the
 address of the current stack position, and instructions such as `PUSH` and
-`POP` use indirection to access the RAM word pointed to by SP. `CALL` and
+`POP` use indirection to access the RAM word pointed to by `SP`. `CALL` and
 `RET` then build on `PUSH` and `POP` to implement subroutine calls and returns.
+
+It also provides the foundation for **pointers in S-Code**. A pointer variable holds
+an encoded RAM operand, so reading or writing through a pointer (`*ptr`) compiles
+to an indirect access to the referenced word. The same mechanism enables pointer
+arithmetic, array traversal, pass-by-address patterns, and dynamic memory allocation.
+
+Without indirect addressing, an S-CPU program could only access addresses known
+at assembly time.
 
 ## Extended Operands and Long Jumps
 

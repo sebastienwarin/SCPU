@@ -138,6 +138,7 @@ Continue with complete programs:
 | Area | Samples |
 | --- | --- |
 | Algorithms | [`BubbleSort.scode`](scode/BubbleSort.scode), [`Fibonacci.scode`](scode/Fibonacci.scode), [`SieveOfEratosthenes.scode`](scode/SieveOfEratosthenes.scode) |
+| Memory | [`DynamicMemory.scode`](scode/DynamicMemory.scode) (heap, malloc/free/calloc/realloc) |
 | LEDs and display | [`BlinkLED.scode`](scode/BlinkLED.scode), [`LEDChaser.scode`](scode/LEDChaser.scode) (K2000 effect), [`HexCounter.scode`](scode/HexCounter.scode) |
 | Physical input | [`Inputs.scode`](scode/Inputs.scode), [`Buttons.scode`](scode/Buttons.scode) |
 | LCD, clock, and sensors | [`LCDMenu.scode`](scode/LCDMenu.scode), [`RealTimeClock.scode`](scode/RealTimeClock.scode), [`RandomNumbers.scode`](scode/RandomNumbers.scode), [`TSL2561.scode`](scode/TSL2561.scode), [`BME280.scode`](scode/BME280.scode) |
@@ -149,7 +150,7 @@ Continue with complete programs:
 
 | Namespace | Modules | Simulator support |
 | --- | --- | --- |
-| `core/` | Delay, Print, Random, String | Yes; visible output depends on the selected driver |
+| `core/` | Delay, Memory, Print, Random, String | Yes; visible output depends on the selected driver |
 | `io/` | DigitalRead, DigitalWrite, Buttons, TwoWire | Device 0/1 only; Buttons and TwoWire are hardware-only |
 | `drivers/` | TTY, HD44780, DS3231, TSL2561, BME280, SSD1306 | TTY only; all other drivers are hardware-only |
 

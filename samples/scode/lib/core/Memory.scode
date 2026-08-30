@@ -1,0 +1,185 @@
+// -------------------------------------------------------------
+// core/memory.scode
+// Dynamic memory allocation (heap) for S-Code
+//
+// The heap spans [__heap_start .. __heap_end[ :
+//   __heap_start : built-in symbol placed by the compiler right after
+//                  the last static RAM allocation
+//   __heap_end   : built-in symbol pointing at the first reserved word
+//
+// Layout : blocks are chained implicitly, each one prefixed by a 1 word
+// header holding the payload size and the free bit.
+//
+//   +--------+------------------+--------+------------------+
+//   | header |     payload      | header |     payload      | ...
+//   +--------+------------------+--------+------------------+
+//   ^        ^
+//   block    block + 1 (pointer returned by malloc)
+// -------------------------------------------------------------
+
+extern int __heap_start;
+extern int __heap_end;
+
+const int HEAP_FREE      = 0x8000;   // header bit 15 : block is free
+const int HEAP_SIZE_MASK = 0x7FFF;   // header bits 0..14 : payload size
+
+int* heap_base  = &__heap_start;     // first block of the heap
+int* heap_break = &__heap_start;     // first word never allocated yet
+int* heap_limit = &__heap_end;       // first word outside of the heap
+
+// Allocate `size` words and return a pointer to the payload, 0 on failure.
+int* malloc(int size) {
+    if (size <= 0) {
+        return 0;
+    }
+
+    // First fit : look for a reusable free block.
+    int* block = heap_base;
+    while (block < heap_break) {
+        int header = *block;
+        int blockSize = header & HEAP_SIZE_MASK;
+
+        if ((header & HEAP_FREE) != 0 && blockSize >= size) {
+            // Split only if the remainder can hold a header plus one payload word.
+            if (blockSize > size + 1) {
+                int* next = block + size + 1;
+                *next = HEAP_FREE | (blockSize - size - 1);
+                *block = size;
+            }
+            else {
+                // Too small to split : consume the whole block.
+                *block = blockSize;
+            }
+            return block + 1;
+        }
+
+        block = block + blockSize + 1;
+    }
+
+    // No reusable block : extend the heap.
+    //
+    // Written this way rather than `heap_break + size + 1 > heap_limit`
+    // to avoid a possible 16-bit overflow.
+    if (size > heap_limit - heap_break - 1) {
+        return 0;
+    }
+
+    block = heap_break;
+    *block = size;
+    heap_break = block + size + 1;
+
+    return block + 1;
+}
+
+// Release a block previously returned by malloc. free(0) is a no-op.
+void free(int* ptr) {
+    if (ptr == 0) {
+        return;
+    }
+
+    int* block = ptr - 1;
+
+    // Walk the block list to locate the block and its predecessor.
+    int* previous = 0;
+    int* current = heap_base;
+    while (current < heap_break && current != block) {
+        previous = current;
+        current = current + (*current & HEAP_SIZE_MASK) + 1;
+    }
+
+    // Unknown pointer or already free : ignore.
+    if (current != block || (*block & HEAP_FREE) != 0) {
+        return;
+    }
+
+    int size = *block & HEAP_SIZE_MASK;
+    *block = HEAP_FREE | size;
+
+    // Coalesce with the following free blocks.
+    int* next = block + size + 1;
+    while (next < heap_break && (*next & HEAP_FREE) != 0) {
+        size = size + (*next & HEAP_SIZE_MASK) + 1;
+        *block = HEAP_FREE | size;
+        next = block + size + 1;
+    }
+
+    // Coalesce with the preceding block when it is free.
+    if (previous != 0 && (*previous & HEAP_FREE) != 0) {
+        size = (*previous & HEAP_SIZE_MASK) + size + 1;
+        *previous = HEAP_FREE | size;
+        block = previous;
+    }
+
+    // Give the trailing space back to the heap break.
+    if (block + size + 1 >= heap_break) {
+        heap_break = block;
+    }
+}
+
+// Fill `count` words starting at `dst` with `value`.
+void memset(int* dst, int value, int count) {
+    for (int i = 0; i < count; i++) {
+        *(dst + i) = value;
+    }
+}
+
+// Copy `count` words from `src` to `dst` (non overlapping).
+void memcpy(int* dst, int* src, int count) {
+    for (int i = 0; i < count; i++) {
+        *(dst + i) = *(src + i);
+    }
+}
+
+// Allocate `size` words initialized to zero.
+int* calloc(int size) {
+    int* ptr = malloc(size);
+    if (ptr != 0) {
+        memset(ptr, 0, size);
+    }
+    return ptr;
+}
+
+// Resize a block, preserving its content. Returns 0 and keeps the
+// original block untouched when the allocation fails.
+int* realloc(int* ptr, int size) {
+    if (ptr == 0) {
+        return malloc(size);
+    }
+    if (size <= 0) {
+        free(ptr);
+        return 0;
+    }
+
+    int currentSize = *(ptr - 1) & HEAP_SIZE_MASK;
+    if (currentSize >= size) {
+        return ptr;
+    }
+
+    int* target = malloc(size);
+    if (target == 0) {
+        return 0;
+    }
+
+    memcpy(target, ptr, currentSize);
+    free(ptr);
+
+    return target;
+}
+
+// Payload size of an allocated block.
+int msize(int* ptr) {
+    if (ptr == 0) {
+        return 0;
+    }
+    return *(ptr - 1) & HEAP_SIZE_MASK;
+}
+
+// Words still available at the end of the heap (excluding free blocks).
+int heap_available() {
+    return heap_limit - heap_break;
+}
+
+// Reset the whole heap. All previously returned pointers become invalid.
+void heap_reset() {
+    heap_break = heap_base;
+}

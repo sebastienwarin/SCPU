@@ -21,7 +21,7 @@ The S-Code compiler is organized into three main projects:
 
 * **SCode.Compiler.Tests**
   Unit tests built with **xUnit**, ensuring correctness of parsing, semantic rules, and code generation.
-  The test suite includes **220+ unit tests** covering control flow, function calls, expressions, and error handling.
+  The test suite includes **250+ unit tests** covering control flow, function calls, expressions, scoping, and error handling.
 
 ## 2. CLI Usage
 
@@ -870,6 +870,56 @@ They are declared using the directive `#const` (not the `const` keyword) and cor
 | Accessible at runtime   | ❌ No                              | ✅ Yes                     |
 | Exported to assembly    | ✅ As `#const` directive           | ❌ No                      |
 
+### 3.11 Memory Layout & Dynamic Allocation
+
+#### RAM layout
+
+The compiler places every global, `static` and `const`-free variable in the **user page**, in declaration order.
+
+| Region        | Virtual range     | Content                                              |
+| ------------- | ----------------- | ---------------------------------------------------- |
+| Zero page     | `0x2000..0x20FF`  | Call stack (SP starts at `0x20FF` and grows downward) |
+| User page     | `0x2100..0x26FF`  | Static allocations, then the heap                    |
+| Reserved page | `0x2700..0x27FF`  | `R0..R9`, `FP`, `SP`, compiler temporaries           |
+
+#### Built-in heap symbols
+
+To let S-Code programs know where the static allocations end, the compiler always emits two symbols, automatically declared as `extern int`:
+
+| Symbol          | Meaning                                                                        |
+| --------------- | ------------------------------------------------------------------------------ |
+| `__heap_start`  | First word after **all** static RAM allocations — emitted as the last `#res` of the user page |
+| `__heap_end`    | First word **outside** the heap (start of the reserved page, `0x2700`)         |
+
+They require no declaration and are used through the address-of operator:
+
+```C
+int* heapStart = &__heap_start;
+int* heapEnd   = &__heap_end;
+int available  = heapEnd - heapStart;
+```
+
+Because `__heap_start` is emitted after every global, `static` and included-library variable, its address adapts automatically when the program grows.
+
+#### Dynamic allocation
+
+The `core/Memory` library implements a heap allocator on top of these symbols
+(implicit free list, first-fit allocation, block splitting and coalescing):
+
+```C
+#include "core/Memory"
+
+int* buffer = malloc(8);
+if (buffer != 0) {
+  *buffer = 42;
+  buffer = realloc(buffer, 16);
+  free(buffer);
+}
+```
+
+⚠️ The heap grows upward towards the reserved page while the call stack grows downward from `0x20FF`;
+neither is bounds-checked at runtime, so deep recursion and large allocations must be kept in check.
+
 ## 4. Standard Library
 
 The S-Code standard library provides reusable modules for common I/O operations, core utilities, and device drivers.
@@ -880,6 +930,7 @@ Each module is included via `#include "<path>"`.
 | Module      | Path           | Description                            | Functions                                                            |
 | ----------- | -------------- | -------------------------------------- | -------------------------------------------------------------------- |
 | **Delay**   | `core/delay`   | Simple delay routine using CPU timing. | `void delay(int ms);`                                                |
+| **Memory**  | `core/Memory`  | Heap allocator built on `__heap_start`. | `int* malloc(int size);`<br>`void free(int* ptr);`<br>`int* calloc(int size);`<br>`int* realloc(int* ptr, int size);`<br>`void memset(int* dst, int value, int count);`<br>`void memcpy(int* dst, int* src, int count);`<br>`int msize(int* ptr);` |
 | **Print**   | `core/print`   | Text and numeric output utilities.     | `void Print(string str);`<br>`void PrintNumber(int number);`         |
 | **Strings** | `core/string`  | Basic string handling utilities.       | `int strlen(string str);`<br>`bool strcmp(string str, string str2);` |
 
@@ -980,6 +1031,8 @@ for (int x = 0; x < sizeof(numbers) - 1; x++) {
 | Inline Assembly (multi-line)                     | ✅ Supported via `asm("...")` blocks                        |
 | `const` variables                                | ✅ Read-only; accessed directly from ROM                    |
 | `static` variables                               | ✅ Persistent; initialized once via compiler-generated flag |
+| `extern` variables                               | ✅ Bind an assembly symbol without reserving RAM            |
+| Dynamic memory (`malloc` / `free`)               | ✅ Via `core/Memory` and the built-in `__heap_start` symbol |
 | Pointers                                         | ✅ Read/write dereference, arithmetic supported              |
 | AddressOf (`&`)                                  | ✅ On any variable or array element                         |
 | Dereference (`*expr`)                            | ✅ On any expression                                        |

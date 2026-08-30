@@ -1,11 +1,19 @@
 ﻿using Antlr4.Runtime;
 using SCode.Compiler.Ast.Statements;
+using SCode.Compiler.Ast.Statements.VariableDeclaration;
 using SCode.Compiler.Exceptions;
+using SCode.Compiler.Type;
+using SCPU.Architecture;
 
 namespace SCode.Compiler.Ast
 {
     public class Program : Node
     {
+        // First word available after all the static RAM allocations
+        public const string HeapStartSymbol = "__heap_start";
+        // First word after the heap area (start of the reserved page)
+        public const string HeapEndSymbol = "__heap_end";
+
         [ChildNode]
         public List<Statement> Body { get; set; }
 
@@ -23,6 +31,9 @@ namespace SCode.Compiler.Ast
             {
                 throw this.RaiseError("Program cannot be empty");
             }
+            // Declare the memory layout symbols, resolved by the assembler
+            Body.Insert(0, CreateHeapSymbolsDeclaration());
+            this.SetContext(context);
             // Visit the AST
             this.Visit();
         }
@@ -49,6 +60,24 @@ namespace SCode.Compiler.Ast
             Body.Where(node => node is FunctionDeclarationStatement functionDeclaration && 
                                Context.CalledFunctions.ContainsKey(functionDeclaration.Identifier))
                 .BuildNodes();
+
+            // Must stay the very last user page reservation : its address marks the end of the static allocations
+            Context.InstructionBuilder.AssemblyBuilder.AddMemoryReservation(HeapStartSymbol, 1);
+            Context.InstructionBuilder.DeclareConstants(HeapEndSymbol, $"0x{MemoryMap.Reserved.Start:X}");
+        }
+
+        private static VariableDeclarationStatement CreateHeapSymbolsDeclaration()
+        {
+            return new VariableDeclarationStatement
+            {
+                IsExtern = true,
+                Type = new TypeDescriptor { Name = TypeInfo.Int.Name, IsBaseType = true },
+                Variables =
+                [
+                    new VariableDeclarator { Identifier = HeapStartSymbol },
+                    new VariableDeclarator { Identifier = HeapEndSymbol }
+                ]
+            };
         }
 
         private bool ResolveIncludes(out List<Statement>? expandedBody)

@@ -69,6 +69,14 @@ namespace SCode.Compiler.Tests.Support
             return cpu;
         }
 
+        /// <summary>Compiles the source and returns the generated assembly text (no simulation).</summary>
+        public static async Task<string> CompileToAssemblyAsync(string src)
+        {
+            var (compiler, _) = BuildServices();
+            var compilation = await compiler.CompileAsync(new CompileRequest { Source = SourceDocument.FromInline(src) });
+            return await compilation.GeneratedAssembly.ReadAllTextAsync();
+        }
+
         private static (Compiler, Assembler) BuildServices()
         {
             var services = new ServiceCollection();
