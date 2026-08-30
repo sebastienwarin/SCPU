@@ -660,7 +660,7 @@ namespace SCode.Compiler.Ast
             var assignment = new AssignmentExpression
             {
                 Source = SourceRange.FromParserContext(context),
-                Target = VisitExpression(context.primaryExpression()),
+                Target = VisitExpression(context.unaryExpression()),
                 Value = VisitExpression(context.expression())
             };
             switch (VisitAssignmentOperator(context.assignmentOperator()))

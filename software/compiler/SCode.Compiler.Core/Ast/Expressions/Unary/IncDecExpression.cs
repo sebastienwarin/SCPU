@@ -57,14 +57,11 @@ namespace SCode.Compiler.Ast.Expressions.Unary
                 functionDeclaration!.LoadIdentifierAddress(_identifierInfo, Registers.RPeek);
                 builder.EmitMove(tempVar, Registers.RPeek.AsIndirectAddress());
             }
-            else if (Target is DereferenceExpression dereference && dereference.Target is IdentifierExpression identifier)
+            else if (Target is DereferenceExpression dereference)
             {
                 var tempVar = Context.TemporaryVariables.Create();
                 builder.EmitStoreA(tempVar);
-                identifier.EmitLoadAddress();
-                builder.EmitStoreA(Registers.RPeek);
-                builder.EmitMove(Registers.RPeek.AsIndirectAddress(), Registers.RPeek);
-                builder.EmitMove(tempVar, Registers.RPeek.AsIndirectAddress());
+                dereference.EmitStoreThrough(tempVar);
             }
             else
             {

@@ -127,7 +127,7 @@ Continue with algorithms and I/O:
 | 1 | [`HelloWorld.scode`](scode/HelloWorld.scode) | Includes, strings, output | Universal greeting in the terminal |
 | 2 | [`Minimal.scode`](scode/Minimal.scode) | Smallest structured program | `answer` and accumulator = 42 |
 | 3 | [`LanguageBasics.scode`](scode/LanguageBasics.scode) | Basic types, literals, operators, expressions | `result = 42` |
-| 4 | [`ArraysAndPointers.scode`](scode/ArraysAndPointers.scode) | Arrays, pointers, address-of, dereference | Two values equal 42 |
+| 4 | [`ArraysAndPointers.scode`](scode/ArraysAndPointers.scode) | Arrays, pointers, address-of, read/write dereference, pass-by-pointer | `checksum = 42`, `pointer = 42`, `updated = 100`, `values[1] = 9`, `doubled = 12,18,24,30`, `swapped = 5,2` |
 | 5 | [`StringManipulation.scode`](scode/StringManipulation.scode) | String indexing, char* traversal, strlen/strcmp | Manual and library string checks printed |
 | 6 | [`ControlFlow.scode`](scode/ControlFlow.scode) | if, switch, for, while | Three successful terminal lines |
 | 7 | [`Functions.scode`](scode/Functions.scode) | Parameters, returns, recursion | 42 and 120 |

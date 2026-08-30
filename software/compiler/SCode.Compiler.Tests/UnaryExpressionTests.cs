@@ -52,7 +52,7 @@ namespace SCode.Compiler.Tests
             ");
         }
 
-        [Fact(Skip = "Write to pointer not supported")]
+        [Fact]
         public async Task PassingPointersToFunctions_ReadWrite()
         {
             await SCodeRunner.ExecuteCodeAsync($@"
@@ -65,6 +65,62 @@ namespace SCode.Compiler.Tests
 
                 addN(&v, 8);
                 assert(v == 50);
+            ");
+        }
+
+        [Fact]
+        public async Task Deref_Assign_Local()
+        {
+            await SCodeRunner.ExecuteCodeAsync($@"
+                int a = 1;
+                int* p = &a;
+                *p = 99;
+                assert(a == 99);
+            ");
+        }
+
+        [Fact]
+        public async Task Deref_Assign_CompoundOperator()
+        {
+            await SCodeRunner.ExecuteCodeAsync($@"
+                int a = 10;
+                int* p = &a;
+                *p += 5;
+                assert(a == 15);
+            ");
+        }
+
+        [Fact]
+        public async Task Deref_Assign_ArrayElement()
+        {
+            await SCodeRunner.ExecuteCodeAsync($@"
+                int numbers[] = {{ 6, 9, 3, 8 }};
+                int* p = &numbers[1];
+                *p = 42;
+                assert(numbers[1] == 42);
+            ");
+        }
+
+        [Fact]
+        public async Task Deref_Assign_Nested()
+        {
+            await SCodeRunner.ExecuteCodeAsync($@"
+                int a = 1;
+                int* p = &a;
+                int** pp = &p;
+                **pp = 7;
+                assert(a == 7);
+            ");
+        }
+
+        [Fact]
+        public async Task Deref_IncDec_ThroughComputedPointerExpression()
+        {
+            await SCodeRunner.ExecuteCodeAsync($@"
+                int numbers[] = {{ 6, 9, 3, 8 }};
+                int* p = &numbers;
+                ++*(p + 1);
+                assert(numbers[1] == 10);
             ");
         }
 

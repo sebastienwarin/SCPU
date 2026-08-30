@@ -17,6 +17,7 @@ namespace SCode.Compiler.Ast.Expressions
         {
             PrepareChildren();
             if (Target is not IdentifierExpression &&
+                Target is not DereferenceExpression &&
                 (Target is not ArrayAccessExpression arrayTarget || arrayTarget.Array is not IdentifierExpression) &&
                 (Target is not MemberAccessExpression memberTarget || memberTarget.Expression is not IdentifierExpression))
             {
@@ -31,6 +32,10 @@ namespace SCode.Compiler.Ast.Expressions
             else if (_identifierInfo != null && _identifierInfo.DataType != null &&
                     (!_identifierInfo.DataType.CanAssignTo(Value.GetResultType()) &&
                     !(_identifierInfo.DataType.TypeInfo == TypeInfo.String && Value is AddressOfExpression)))
+            {
+                throw RaiseError($"Incompatible assignment type to '{Target}' - cannot assign '{Value.GetResultType()}' to '{Target.GetResultType()}'.");
+            }
+            else if (Target is DereferenceExpression && !Target.GetResultType().CanAssignTo(Value.GetResultType()))
             {
                 throw RaiseError($"Incompatible assignment type to '{Target}' - cannot assign '{Value.GetResultType()}' to '{Target.GetResultType()}'.");
             }
@@ -77,6 +82,12 @@ namespace SCode.Compiler.Ast.Expressions
                     // Pop the value & store the array
                     Context.InstructionBuilder.EmitPop(arrayAddress.Address.AsIndirectAddress());
                 }
+            }
+            else if (Target is DereferenceExpression dereferenceExpression)
+            {
+                var tempVar = Context.TemporaryVariables.Create();
+                Context.InstructionBuilder.EmitStoreA(tempVar);
+                dereferenceExpression.EmitStoreThrough(tempVar);
             }
             else if (Target is MemberAccessExpression)
             {

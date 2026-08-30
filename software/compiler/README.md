@@ -228,7 +228,6 @@ int* q = &xs[2];     // pointer to third element
   ```
 * Arrays cannot yet be declared on the stack (use `static` in functions).
 * Passing arrays by value is not supported — use pointers instead.
-* Dereferencing via pointer (`*p`) is read-only.
 * Nested arrays (array of arrays) are not supported.
 
 ### 3.3 Strings
@@ -377,7 +376,14 @@ int* ptr = &x;
 assert(*ptr == 42);
 ```
 
-Pointers in S-Code behave like `const int*` in C: they allow reading but not writing through dereference (`*ptr = value` not supported yet).
+Pointers support both reading and writing through dereference (`*ptr`, including compound operators like `*ptr += 1`):
+
+```csharp
+int a = 1;
+int* p = &a;
+*p = 99;
+assert(a == 99);
+```
 
 ##### Pointer arithmetic
 
@@ -676,7 +682,7 @@ point.x       // struct member (partial)
 
 ```C
 &x    // address-of
-*x    // dereference (read only)
+*x    // dereference (read/write)
 ~x    // bitwise NOT
 !x    // logical NOT
 -x    // unary minus
@@ -930,7 +936,7 @@ for (int x = 0; x < sizeof(numbers) - 1; x++) {
 | Inline Assembly (multi-line)                     | ✅ Supported via `asm("...")` blocks                        |
 | `const` variables                                | ✅ Read-only; accessed directly from ROM                    |
 | `static` variables                               | ✅ Persistent; initialized once via compiler-generated flag |
-| Pointers                                         | ✅ Read-only dereference, arithmetic supported              |
+| Pointers                                         | ✅ Read/write dereference, arithmetic supported              |
 | AddressOf (`&`)                                  | ✅ On any variable or array element                         |
 | Dereference (`*expr`)                            | ✅ On any expression                                        |
 | String ↔ char* casts                             | ✅ Implicit both ways                                       |

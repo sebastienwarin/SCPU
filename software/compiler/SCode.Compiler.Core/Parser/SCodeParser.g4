@@ -113,7 +113,7 @@ expression
 
 nonAssignmentExpression: conditionalExpression;
 
-assignment: primaryExpression assignmentOperator expression;
+assignment: unaryExpression assignmentOperator expression;
 assignmentOperator
   : '='
   | '+='

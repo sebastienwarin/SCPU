@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-// Generated from c:/Users/Sebastien/source/repos/SCPU/software/compiler/SCode.Compiler.Core/Parser/SCodeParser.g4 by ANTLR 4.13.1
+// Generated from SCodeParser.g4 by ANTLR 4.13.1
 
 // Unreachable code detected
 #pragma warning disable 0162
@@ -2718,8 +2718,8 @@ public partial class SCodeParser : Parser {
 	}
 
 	public partial class AssignmentContext : ParserRuleContext {
-		[System.Diagnostics.DebuggerNonUserCode] public PrimaryExpressionContext primaryExpression() {
-			return GetRuleContext<PrimaryExpressionContext>(0);
+		[System.Diagnostics.DebuggerNonUserCode] public UnaryExpressionContext unaryExpression() {
+			return GetRuleContext<UnaryExpressionContext>(0);
 		}
 		[System.Diagnostics.DebuggerNonUserCode] public AssignmentOperatorContext assignmentOperator() {
 			return GetRuleContext<AssignmentOperatorContext>(0);
@@ -2748,7 +2748,7 @@ public partial class SCodeParser : Parser {
 			EnterOuterAlt(_localctx, 1);
 			{
 			State = 416;
-			primaryExpression();
+			unaryExpression();
 			State = 417;
 			assignmentOperator();
 			State = 418;
@@ -4694,7 +4694,7 @@ public partial class SCodeParser : Parser {
 		33,0,404,405,5,49,0,0,405,409,1,0,0,0,406,407,5,11,0,0,407,409,5,49,0,
 		0,408,402,1,0,0,0,408,406,1,0,0,0,409,65,1,0,0,0,410,413,3,70,35,0,411,
 		413,3,68,34,0,412,410,1,0,0,0,412,411,1,0,0,0,413,67,1,0,0,0,414,415,3,
-		90,45,0,415,69,1,0,0,0,416,417,3,78,39,0,417,418,3,72,36,0,418,419,3,66,
+		90,45,0,415,69,1,0,0,0,416,417,3,74,37,0,417,418,3,72,36,0,418,419,3,66,
 		33,0,419,71,1,0,0,0,420,421,7,1,0,0,421,73,1,0,0,0,422,441,3,76,38,0,423,
 		441,3,78,39,0,424,425,5,51,0,0,425,441,3,74,37,0,426,427,5,52,0,0,427,
 		441,3,74,37,0,428,429,5,59,0,0,429,441,3,74,37,0,430,431,5,60,0,0,431,

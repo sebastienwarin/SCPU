@@ -14,6 +14,14 @@ namespace SCode.Compiler.Ast.Expressions.Unary
             Context.InstructionBuilder.EmitLoadA(Registers.RPeek.AsIndirectAddress());
         }
 
+        // Writes 'value' at the address this expression points to (used by assignment and inc/dec).
+        public void EmitStoreThrough(TemporaryVariable value)
+        {
+            Target.Build();
+            Context.InstructionBuilder.EmitStoreA(Registers.RPeek);
+            Context.InstructionBuilder.EmitMove(value, Registers.RPeek.AsIndirectAddress());
+        }
+
         public override TypeInfo GetResultType()
         {
             if (Target is IdentifierExpression identifierExpression &&

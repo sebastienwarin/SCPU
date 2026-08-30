@@ -2,20 +2,47 @@
 // S-CODE SAMPLE - ARRAYS AND POINTERS
 // =============================================================================
 // What it does:
-//   Iterates over an array to compute a checksum and dereferences a pointer.
+//   Computes an array checksum, then demonstrates read/write access through
+//   pointers: a plain variable, an array element, walking an array in place,
+//   and swapping two values through a function that receives pointers.
 // Expected result:
-//   The terminal prints "checksum = 42" followed by "pointer = 42".
+//   The terminal prints:
+//     checksum = 42
+//     pointer = 42
+//     updated = 100
+//     values[1] = 9
+//     doubled = 12,18,24,30
+//     swapped = 5,2
 // Runs on:
 //   Desktop/CLI simulators and S-CPU targets with the TTY device.
 // Demonstrates:
-//   Array initialization/indexing, sizeof, address-of, and dereference.
+//   Array initialization/indexing, sizeof, address-of, read/write dereference,
+//   pointer arithmetic over an array, and pass-by-pointer (swap idiom).
 // =============================================================================
 
 #include "core/Print"
 #include "drivers/TTY"
 
+// Prints 'count' values starting at 'arr', walking forward with pointer
+// arithmetic instead of indexing - arrays and pointers are interchangeable here.
+void PrintArray(int* arr, int count) {
+  for (int i = 0; i < count; i++) {
+    if (i > 0) { Print(","); }
+    PrintNumber(*arr);
+    arr++;
+  }
+}
+
+// Swaps the two values pointed to by 'a' and 'b' - a function can modify the
+// caller's variables by writing through the pointers it receives.
+void Swap(int* a, int* b) {
+  int temp = *a;
+  *a = *b;
+  *b = temp;
+}
+
 void main() {
-  // An array occupies consecutive RAM words; sizeof returns its element count.
+  // --- Arrays: initialization, indexing, sizeof ---
   static int values[] = { 6, 9, 12, 15 };
   int checksum = 0;
 
@@ -23,14 +50,44 @@ void main() {
     checksum += values[i];
   }
 
-  int answer = 42;
-  int* pointer = &answer;        // &: take the address of a variable
-  int pointedValue = *pointer;  // *: read the value stored at that address
-
   Print("checksum = ");
   PrintNumber(checksum);
+
+  // --- Address-of (&) and dereference (*): read then write a variable ---
+  int answer = 42;
+  int* pointer = &answer;        // &: take the address of a variable
+  int pointedValue = *pointer;   // *: read the value stored at that address
+
   Print("\npointer = ");
   PrintNumber(pointedValue);
+
+  *pointer = 100;                // *: write through the pointer, updates 'answer'
+  Print("\nupdated = ");
+  PrintNumber(answer);
+
+  // --- Address-of an array element: & is not limited to plain variables ---
+  int* second = &values[1];
+  Print("\nvalues[1] = ");
+  PrintNumber(*second);
+
+  // --- Pointer arithmetic: walk the array in place and double each element ---
+  int* cursor = &values;
+  for (int j = 0; j < sizeof(values); j++) {
+    *cursor = *cursor * 2;
+    cursor++;
+  }
+
+  Print("\ndoubled = ");
+  PrintArray(&values, sizeof(values));
+
+  // --- Pass-by-pointer: a function writes back into the caller's variables ---
+  int x = 2, y = 5;
+  Swap(&x, &y);
+
+  Print("\nswapped = ");
+  PrintNumber(x);
+  Print(",");
+  PrintNumber(y);
   Print("\n");
 }
 
