@@ -1,0 +1,23 @@
+name: Software CI
+
+on:
+  push:
+    branches: ["**"]
+    paths: ["software/**", ".github/workflows/ci.yml"]
+  pull_request:
+    paths: ["software/**", ".github/workflows/ci.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/dotnet/sdk:10.0
+    steps:
+      - name: Install Actions runtime
+        run: apt-get update && apt-get install --yes --no-install-recommends git nodejs
+      - uses: actions/checkout@v4
+      - run: dotnet restore software/SCPU.sln -p:Platform="Any CPU"
+      - run: dotnet build software/SCPU.sln --configuration Release --no-restore -p:Platform="Any CPU"
+      - run: dotnet test software/SCPU.sln --configuration Release --no-build --no-restore -p:Platform="Any CPU" --logger "console;verbosity=normal"
