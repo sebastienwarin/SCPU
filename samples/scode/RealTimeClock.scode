@@ -1,0 +1,54 @@
+// =============================================================================
+// S-CODE SAMPLE - REAL-TIME CLOCK
+// =============================================================================
+// What it does:
+//   Reads a DS3231 and formats its date and time on an LCD2004.
+// Expected result:
+//   The LCD shows DD/MM/20YY and HH:MM:SS, refreshed once per second.
+// Runs on:
+//   S-CPU TTL with the I2C DS3231 and LCD2004 peripherals.
+// Real hardware required:
+//   Yes. The I2C bus, RTC, and LCD are not emulated by the simulators.
+// Demonstrates:
+//   RTC updates, two-digit formatting, and periodic display refresh.
+// =============================================================================
+#include "core/Delay"
+#include "core/Print"
+
+#include "drivers/HD44780"   // LCD2004 display (Hitachi HD44780 controller)
+#include "drivers/DS3231"    // DS3231 real-time clock
+
+void PrintTwoDigits(int value) {
+  if (value < 10) PrintChar('0');
+  PrintDigits(value);
+}
+
+void main() {
+  
+  // Init LCD
+  lcd_begin();
+
+  // Init DS3231 RTC clock
+  rtc_begin(RTC_DS3231_ADDR);
+
+  while (true) {
+    rtc_update();
+
+    // line 0 : JJ/MM/20YY
+    lcd_setCursor(0, 0);
+    PrintTwoDigits(rtc_day); PrintChar('/');
+    PrintTwoDigits(rtc_mon); PrintChar('/');
+    Print("20"); PrintTwoDigits(rtc_year);
+
+    // line 1 : HH:MM:SS
+    lcd_setCursor(0, 1);
+    PrintTwoDigits(rtc_hour); PrintChar(':');
+    PrintTwoDigits(rtc_min);  PrintChar(':');
+    PrintTwoDigits(rtc_sec);
+
+    // Repeat every second
+    delay(1000);
+  }
+}
+
+main();

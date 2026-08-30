@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "SCPU.Simulator.ConsoleUI": {
+      "commandName": "Project",
+      "commandLineArgs": "\"..\\..\\..\\..\\..\\Assembler\\AutoTest.asm\""
+    }
+  }
+}

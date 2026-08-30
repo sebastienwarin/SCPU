@@ -1,0 +1,21 @@
+<?xml version="1" encoding="UTF-8"?>
+<!DOCTYPE gowin-fpga-project>
+<Project>
+    <Template>FPGA</Template>
+    <Version>5</Version>
+    <Device name="GW5A-25A" pn="GW5A-LV25MG121NC1/I0">gw5a25a-002</Device>
+    <FileList>
+        <File path="src/btn_onepulse.v" type="file.verilog" enable="1"/>
+        <File path="src/gowin_dpb/gowin_dpb.v" type="file.verilog" enable="1"/>
+        <File path="src/gowin_pll/gowin_pll.v" type="file.verilog" enable="1"/>
+        <File path="src/gowin_pll/gowin_pll_mod.v" type="file.verilog" enable="1"/>
+        <File path="src/gowin_sp/gowin_sp.v" type="file.verilog" enable="1"/>
+        <File path="src/mmio_device.v" type="file.verilog" enable="1"/>
+        <File path="src/pll_init.v" type="file.verilog" enable="1"/>
+        <File path="src/scpu_core.v" type="file.verilog" enable="1"/>
+        <File path="src/scpu_top.v" type="file.verilog" enable="1"/>
+        <File path="src/seg7_dual_hex.v" type="file.verilog" enable="1"/>
+        <File path="src/scpu.cst" type="file.cst" enable="1"/>
+        <File path="src/gowin_dpb/rom.mi" type="file.other" enable="1"/>
+    </FileList>
+</Project>

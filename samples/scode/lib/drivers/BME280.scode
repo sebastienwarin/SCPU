@@ -1,0 +1,181 @@
+#include "core/Delay"
+#include "io/TwoWire"
+
+// ---------------- I2C addresses ----------------
+#const int BME280_ADDR_SDO_LOW  = 0x76; // SDO->GND
+#const int BME280_ADDR_SDO_HIGH = 0x77; // SDO->VDD
+
+// ---------------- Registers ----------------
+#const int BME280_REG_ID        = 0xD0; // expect 0x60
+#const int BME280_REG_RESET     = 0xE0; // write 0xB6 to reset
+#const int BME280_REG_CTRL_HUM  = 0xF2;
+#const int BME280_REG_STATUS    = 0xF3;
+#const int BME280_REG_CTRL_MEAS = 0xF4;
+#const int BME280_REG_CONFIG    = 0xF5;
+#const int BME280_REG_PRESS_MSB = 0xF7; // F7..F9: press 20-bit
+#const int BME280_REG_TEMP_MSB  = 0xFA; // FA..FC: temp 20-bit
+#const int BME280_REG_HUM_MSB   = 0xFD; // FD..FE: hum 16-bit
+
+// Calibration blocks
+#const int BME280_REG_CALIB_TP  = 0x88; // 0x88..0xA1 (T1..T3, P1..P9 + extra H1 at 0xA1)
+#const int BME280_REG_CALIB_H1  = 0xA1; // H1 (8-bit)
+#const int BME280_REG_CALIB_H   = 0xE1; // 0xE1..0xE7
+
+// ---------------- Modes & oversampling ----------------
+// oversampling: 0=skipped, 1=x1, 2=x2, 3=x4, 4=x8, 5=x16
+#const int BME280_OSRS_SKIP = 0;
+#const int BME280_OSRS_X1   = 1;
+#const int BME280_OSRS_X2   = 2;
+#const int BME280_OSRS_X4   = 3;
+#const int BME280_OSRS_X8   = 4;
+#const int BME280_OSRS_X16  = 5;
+
+// mode: 0=sleep, 1=forced, 2/3=normal
+#const int BME280_MODE_SLEEP  = 0;
+#const int BME280_MODE_FORCED = 1;
+#const int BME280_MODE_NORMAL = 3;
+
+// standby (t_sb in config, for normal mode), filter (IIR)
+#const int BME280_T_SB_1000MS = 5; // arbitrary default
+#const int BME280_FILTER_OFF  = 0;
+
+// ---------------- Internal state ----------------
+static int bme_addr = BME280_ADDR_SDO_LOW;
+
+// raw ADC channels (20-bit T/P packed, 16-bit H)
+static int bme_rawT = 0; // top 16 bits of 20-bit (we keep MSB:ADC>>4 via integer math below)
+static int bme_rawP = 0;
+static int bme_rawH = 0;
+
+// calibration (stored as 16-bit; signs match datasheet)
+static int dig_T1, dig_T2, dig_T3;
+static int dig_P1, dig_P2, dig_P3, dig_P4, dig_P5, dig_P6, dig_P7, dig_P8, dig_P9;
+static int dig_H1, dig_H2, dig_H3, dig_H4, dig_H5, dig_H6;
+
+// last chip id
+static int bme_id = 0;
+
+// ---------------- I2C helpers ----------------
+int _r8(int reg)  { return i2c_read8(bme_addr, reg) & 0xFF; }
+void _w8(int reg, int val) { i2c_write8(bme_addr, reg, val & 0xFF); }
+
+// Read 20-bit value from reg..reg+2 (MSB, LSB, XLSB[7:4])
+// Returns the value right-shifted by 4 (i.e., 20-bit >> 4 -> 16-bit safe)
+int _read20_to16(int reg_msb) {
+  int msb  = _r8(reg_msb);
+  int lsb  = _r8(reg_msb + 1);
+  int xlsb = _r8(reg_msb + 2);
+  // assemble 20-bit: (msb<<12) | (lsb<<4) | (xlsb>>4)
+  // since we cannot do >> here easily, we return (20-bit >> 4) directly as:
+  // ((msb<<8) | lsb) << 0 | (xlsb >> 4)  -> just pack as 16-bit:
+  int val16 = (msb << 8) | lsb;      // top 16 bits
+  // lower 4 bits (xlsb >> 4) are dropped: we effectively did >>4 already
+  return val16 & 0xFFFF;
+}
+
+// ---------------- Calibration read ----------------
+int _r16_le(int reg) {         // little-endian 16-bit
+  int l = _r8(reg);
+  int h = _r8(reg + 1);
+  return (h << 8) | l;
+}
+
+int _r16_le_signed(int reg) {
+  int v = _r16_le(reg);
+  if (v >= 0x8000) v = v - 32768 - 32768;
+  return v;
+}
+
+int _r8_signed(int reg) {
+  int v = _r8(reg);
+  if (v & 0x80) v = v - 0x100;
+  return v;
+}
+
+void _read_calibration() {
+  // Temperature
+  dig_T1 = _r16_le(BME280_REG_CALIB_TP + 0);
+  dig_T2 = _r16_le_signed(BME280_REG_CALIB_TP + 2);
+  dig_T3 = _r16_le_signed(BME280_REG_CALIB_TP + 4);
+
+  // Pressure
+  dig_P1 = _r16_le(BME280_REG_CALIB_TP + 6);
+  dig_P2 = _r16_le_signed(BME280_REG_CALIB_TP + 8);
+  dig_P3 = _r16_le_signed(BME280_REG_CALIB_TP + 10);
+  dig_P4 = _r16_le_signed(BME280_REG_CALIB_TP + 12);
+  dig_P5 = _r16_le_signed(BME280_REG_CALIB_TP + 14);
+  dig_P6 = _r16_le_signed(BME280_REG_CALIB_TP + 16);
+  dig_P7 = _r16_le_signed(BME280_REG_CALIB_TP + 18);
+  dig_P8 = _r16_le_signed(BME280_REG_CALIB_TP + 20);
+  dig_P9 = _r16_le_signed(BME280_REG_CALIB_TP + 22);
+
+  // Humidity (split across two areas)
+  dig_H1 = _r8(BME280_REG_CALIB_H1);
+
+  dig_H2 = _r16_le_signed(BME280_REG_CALIB_H + 0);
+  dig_H3 = _r8(BME280_REG_CALIB_H + 2);
+
+  // H4 and H5 are bit-packed:
+  int e4 = _r8(BME280_REG_CALIB_H + 3);
+  int e5 = _r8(BME280_REG_CALIB_H + 4);
+  int e6 = _r8(BME280_REG_CALIB_H + 5);
+  // dig_H4: e4 << 4 | (e5 & 0x0F)
+  dig_H4 = (e4 << 4) | (e5 & 0x0F);
+  if (dig_H4 & 0x800) dig_H4 = dig_H4 - 0x1000; // sign 12-bit
+
+  // dig_H5: (e5 >> 4) | (e6 << 4)
+  int e5_hi = e5 / 16; // == e5 >> 4
+  dig_H5 = (e6 << 4) | e5_hi;
+  if (dig_H5 & 0x800) dig_H5 = dig_H5 - 0x1000; // sign 12-bit
+
+  dig_H6 = _r8_signed(BME280_REG_CALIB_H + 6);
+}
+
+// ---------------- Public API ----------------
+
+// Initialize BME280, read chip-id & calibration, set a default config.
+void bme_begin(int address) {
+  bme_addr = address;
+
+  bme_id = _r8(BME280_REG_ID);
+  // Optional: soft reset
+  // _w8(BME280_REG_RESET, 0xB6); delay(2);
+
+  _read_calibration();
+
+  // Default config: oversampling x1 on T,P,H; normal mode; basic standby/filter.
+  _w8(BME280_REG_CTRL_HUM,  BME280_OSRS_X1);
+  _w8(BME280_REG_CONFIG,    (BME280_T_SB_1000MS << 5) | (BME280_FILTER_OFF << 2));
+  _w8(BME280_REG_CTRL_MEAS, (BME280_OSRS_X1 << 5) | (BME280_OSRS_X1 << 2) | BME280_MODE_NORMAL);
+}
+
+// Update raw channels (non-blocking in normal mode; in forced mode, add a wait)
+void bme_update() {
+  // If using FORCED mode, trigger a measurement here by writing CTRL_MEAS with mode=1,
+  // then wait the measurement time (depends on oversampling). In NORMAL mode just read.
+
+  // Read raw pressure (20-bit >> 4 -> 16-bit kept)
+  bme_rawP = _read20_to16(BME280_REG_PRESS_MSB);
+
+  // Read raw temperature (20-bit >> 4 -> 16-bit kept)
+  bme_rawT = _read20_to16(BME280_REG_TEMP_MSB);
+
+  // Read raw humidity (16-bit)
+  int h_msb = _r8(BME280_REG_HUM_MSB);
+  int h_lsb = _r8(BME280_REG_HUM_MSB + 1);
+  bme_rawH = (h_msb << 8) | h_lsb;
+}
+
+// Simple getters (raw)
+int bme_id8()      { return bme_id;  }  // expect 0x60
+int bme_rawTemp()  { return bme_rawT; }  // 20-bit >> 4
+int bme_rawPress() { return bme_rawP; }  // 20-bit >> 4
+int bme_rawHum()   { return bme_rawH; }  // 16-bit
+
+// NOTE on compensation:
+// Accurate compensation for T/P/H requires 32-bit (and 64-bit for pressure).
+// Once S-Code supports 32-bit integers, we can implement:
+//   int bme_temp_centiC();    // °C * 100
+//   int bme_hum_centiPct();   // %RH * 100
+//   int bme_press_Pa();       // Pa
+// using Bosch's official fixed-point formulas.

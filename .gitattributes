@@ -1,0 +1,3 @@
+*.sc linguist-language=C
+*.scode linguist-language=C
+*.sh text eol=lf

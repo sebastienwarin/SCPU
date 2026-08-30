@@ -1,0 +1,212 @@
+// =============================================================================
+// S-CODE SAMPLE - PONG
+// =============================================================================
+// What it does:
+//   Runs a two-player Pong game with button-controlled paddles on an OLED.
+// Expected result:
+//   Two paddles and a moving ball appear; each player can move up/down and the
+//   ball bounces from paddles and screen edges.
+// Runs on:
+//   S-CPU TTL with the SSD1306 OLED and physical input board.
+// Real hardware required:
+//   Yes. The OLED, I2C bus, and buttons are not emulated by the simulators.
+// Demonstrates:
+//   Real-time input, game state, collision detection, and OLED rendering.
+// =============================================================================
+#include "core/Delay"
+#include "io/DigitalRead"
+#include "drivers/SSD1306"
+
+// ------------------ I/O configuration ------------------
+// DigitalRead adds IODEV internally: device 3, register 1 (active-low buttons).
+#const int INPUT_BOARD = 0x301;
+
+// Bit masks for each player control (active-low)
+#const int PLAYER1_UP    = 1 << 2;  // Button 1
+#const int PLAYER1_DOWN  = 1 << 5;  // Button 4
+#const int PLAYER2_UP    = 1 << 4;  // Button 3
+#const int PLAYER2_DOWN  = 1 << 7;  // Button 6
+
+// Active-low input: a cleared bit means that the button is pressed.
+int isPressed(int rawInput, int buttonMask) {
+    return ((~rawInput) & buttonMask) != 0;
+}
+
+// ------------------ Display configuration ------------------
+#const int WIDTH = 128;   // number of columns on SSD1306
+#const int PAGES = 8;     // 64px / 8 = 8 pages (each page = 8 pixels high)
+
+#const int COL_MIN = 0;
+#const int COL_MAX = WIDTH - 1;
+#const int PAGE_MIN = 0;
+#const int PAGE_MAX = PAGES - 1;
+
+#const int COLOR_OFF = 0x00;
+#const int COLOR_ON  = 0xFF;
+
+// ------------------ Game constants ------------------
+#const int PADDLE_WIDTH_COLS   = 2;
+#const int PADDLE_HEIGHT_PAGES = 2;   // ~16 pixels tall
+#const int PADDLE_MARGIN_COL   = 2;
+#const int PADDLE_SPEED        = 1;   // moves 1 page per frame
+
+#const int BALL_WIDTH_COLS     = 2;
+#const int BALL_HEIGHT_PAGES   = 1;   // ~8 pixels
+#const int BALL_SPEED_COL      = 1;   // columns per frame
+
+#const int FRAME_DELAY_MS      = 16;  // pause after each rendered frame
+
+// ------------------ Drawing helpers ------------------
+void oled_clear_rect(int pg_from, int pg_to, int col_from, int col_to) {
+    oled_fill_rect(pg_from, pg_to, col_from, col_to, COLOR_OFF);
+}
+void oled_draw_rect (int pg_from, int pg_to, int col_from, int col_to) {
+    oled_fill_rect(pg_from, pg_to, col_from, col_to, COLOR_ON);
+}
+void draw_paddle(int page, int col) {
+    oled_draw_rect(page, page + PADDLE_HEIGHT_PAGES - 1,
+                   col,  col + PADDLE_WIDTH_COLS - 1);
+}
+void erase_paddle(int page, int col) {
+    oled_clear_rect(page, page + PADDLE_HEIGHT_PAGES - 1,
+                    col,  col + PADDLE_WIDTH_COLS - 1);
+}
+void draw_ball(int page, int col) {
+    oled_draw_rect(page, page + BALL_HEIGHT_PAGES - 1,
+                   col,  col + BALL_WIDTH_COLS - 1);
+}
+void erase_ball(int page, int col) {
+    oled_clear_rect(page, page + BALL_HEIGHT_PAGES - 1,
+                    col,  col + BALL_WIDTH_COLS - 1);
+}
+
+// Clamp a value between two bounds
+int clamp(int v, int lo, int hi) {
+    if (v < lo) return lo;
+    if (v > hi) return hi;
+    return v;
+}
+
+// Returns true if two intervals overlap
+bool overlap(int a_from, int a_to, int b_from, int b_to) {
+    return !(a_to < b_from || b_to < a_from);
+}
+
+// Collision detection between ball and paddle
+bool ball_hits_paddle(int b_page, int b_col, int p_page, int p_col) {
+    int bx1 = b_col;
+    int bx2 = b_col + BALL_WIDTH_COLS - 1;
+    int by1 = b_page;
+    int by2 = b_page + BALL_HEIGHT_PAGES - 1;
+
+    int px1 = p_col;
+    int px2 = p_col + PADDLE_WIDTH_COLS - 1;
+    int py1 = p_page;
+    int py2 = p_page + PADDLE_HEIGHT_PAGES - 1;
+
+    int ox = overlap(bx1, bx2, px1, px2);
+    int oy = overlap(by1, by2, py1, py2);
+    return ox && oy;
+}
+
+// ------------------ Main game loop ------------------
+void main() {
+    // Clear the display
+    oled_clear_rect(PAGE_MIN, PAGE_MAX, COL_MIN, COL_MAX);
+
+    // Initial paddle positions
+    int left_col   = PADDLE_MARGIN_COL;
+    int right_col  = WIDTH - PADDLE_MARGIN_COL - PADDLE_WIDTH_COLS;
+    int left_page  = 3;
+    int right_page = 3;
+
+    // Ball starting position
+    int ball_col   = WIDTH / 2;
+    int ball_page  = 3;
+    int dx = +BALL_SPEED_COL;  // horizontal direction
+    int dy = 0;                // vertical direction: -1, 0, +1
+
+    // Draw initial objects
+    draw_paddle(left_page, left_col);
+    draw_paddle(right_page, right_col);
+    draw_ball(ball_page, ball_col);
+
+    while (true) {
+        // Erase previous positions
+        erase_paddle(left_page, left_col);
+        erase_paddle(right_page, right_col);
+        erase_ball(ball_page, ball_col);
+
+        // Read button states (active-low)
+        int rawInput = DigitalRead(INPUT_BOARD);
+
+        // Player 1 (left)
+        if (isPressed(rawInput, PLAYER1_UP))   left_page  -= PADDLE_SPEED;
+        if (isPressed(rawInput, PLAYER1_DOWN)) left_page  += PADDLE_SPEED;
+
+        // Player 2 (right)
+        if (isPressed(rawInput, PLAYER2_UP))   right_page -= PADDLE_SPEED;
+        if (isPressed(rawInput, PLAYER2_DOWN)) right_page += PADDLE_SPEED;
+
+        // Clamp paddles within screen limits
+        left_page  = clamp(left_page,  PAGE_MIN, PAGE_MAX - (PADDLE_HEIGHT_PAGES - 1));
+        right_page = clamp(right_page, PAGE_MIN, PAGE_MAX - (PADDLE_HEIGHT_PAGES - 1));
+
+        // Move the ball
+        ball_col  += dx;
+        ball_page += dy;
+
+        // Bounce on top/bottom edges
+        if (ball_page <= PAGE_MIN) {
+            ball_page = PAGE_MIN;
+            dy = +1;
+        } else if (ball_page >= PAGE_MAX - (BALL_HEIGHT_PAGES - 1)) {
+            ball_page = PAGE_MAX - (BALL_HEIGHT_PAGES - 1);
+            dy = -1;
+        }
+
+        // Collision with left paddle
+        if (dx < 0 && ball_col <= left_col + PADDLE_WIDTH_COLS &&
+            ball_hits_paddle(ball_page, ball_col, left_page, left_col)) {
+            dx = +BALL_SPEED_COL;
+            // Simple "spin" effect depending on hit position
+            int hit = ball_page - left_page; // 0..(PADDLE_HEIGHT_PAGES-1)
+            if (hit <= 0) dy = -1;
+            else if (hit >= PADDLE_HEIGHT_PAGES - 1) dy = +1;
+            else dy = 0;
+            ball_col = left_col + PADDLE_WIDTH_COLS; // prevent double collision
+        }
+
+        // Collision with right paddle
+        if (dx > 0 && (ball_col + BALL_WIDTH_COLS - 1) >= right_col &&
+            ball_hits_paddle(ball_page, ball_col, right_page, right_col)) {
+            dx = -BALL_SPEED_COL;
+            int hit = ball_page - right_page;
+            if (hit <= 0) dy = -1;
+            else if (hit >= PADDLE_HEIGHT_PAGES - 1) dy = +1;
+            else dy = 0;
+            ball_col = right_col - (BALL_WIDTH_COLS - 1);
+        }
+
+        // Ball out of bounds (left/right) → reset to center and alternate serve
+        if (ball_col < COL_MIN || ball_col > COL_MAX) {
+            ball_col  = WIDTH / 2;
+            ball_page = 3;
+            dx = (dx < 0) ? +BALL_SPEED_COL : -BALL_SPEED_COL;
+            dy = 0;
+        }
+
+        // Draw updated positions
+        draw_paddle(left_page, left_col);
+        draw_paddle(right_page, right_col);
+        draw_ball(ball_page, ball_col);
+
+        // Pause before the next input/update/render cycle.
+        delay(FRAME_DELAY_MS);
+    }
+}
+
+// Init OLED & go!
+oled_begin(OLED_ADDR_0x3C, 128, 64);
+oled_clear();
+main();

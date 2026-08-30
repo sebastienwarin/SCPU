@@ -1,0 +1,24 @@
+{
+  "profiles": {
+    "Generate Assembly only": {
+      "commandName": "Project",
+      "commandLineArgs": "\"..\\..\\..\\..\\..\\..\\samples\\scode\\LanguageBasics.scode\" -f Assembly -p"
+    },
+    "Compile & Print annotated": {
+      "commandName": "Project",
+      "commandLineArgs": "\"..\\..\\..\\..\\..\\..\\samples\\scode\\LanguageBasics.scode\" -p"
+    },
+    "Compile for Digital": {
+      "commandName": "Project",
+      "commandLineArgs": "\"..\\..\\..\\..\\..\\..\\samples\\scode\\LanguageBasics.scode\" -p -f logisim16 -o -\"..\\..\\..\\..\\..\\..\\hardware\\digital\\rom.hex\""
+    },
+    "Compile BlinkLED for Gowin": {
+      "commandName": "Project",
+      "commandLineArgs": "\"..\\..\\..\\..\\..\\..\\samples\\scode\\BlinkLED.scode\" -d FREQ_HZ=81_000_000 -f gowin -o \"..\\..\\..\\..\\..\\..\\hardware\\gowin\\src\\gowin_dpb\\rom.mi\""
+    },
+    "Compile to binary": {
+      "commandName": "Project",
+      "commandLineArgs": "\"..\\..\\..\\..\\..\\..\\samples\\scode\\LanguageBasics.scode\" -f binary -o -\"..\\..\\..\\..\\..\\..\\hardware\\rom.bin\""
+    }
+  }
+}

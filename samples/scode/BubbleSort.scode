@@ -1,0 +1,36 @@
+// =============================================================================
+// S-CODE SAMPLE - BUBBLE SORT
+// =============================================================================
+// What it does:
+//   Sorts ten integers in place with bubble sort, then prints the array.
+// Expected result:
+//   The terminal prints the numbers 0 through 9, one per line.
+// Runs on:
+//   Desktop/CLI simulators and S-CPU targets exposing the device-1 TTY.
+// Demonstrates:
+//   Arrays, nested for loops, comparisons, indexing, and swapping.
+// =============================================================================
+
+#include "core/Print"
+#include "drivers/TTY"
+
+// Input array
+int numbers[] = { 6, 9, 3, 8, 0, 4, 2, 5, 7, 1 };
+
+// Each pass moves the largest remaining value to the end of the array.
+for (int pass = 0; pass < sizeof(numbers) - 1; pass++) {
+  for (int index = 0; index < (sizeof(numbers) - pass) - 1; index++) {
+    if (numbers[index] > numbers[index + 1]) {
+      int temp = numbers[index];
+      numbers[index] = numbers[index + 1];
+      numbers[index + 1] = temp;
+    }
+  }
+}
+
+// Loop variables remain visible after their loop in the current S-Code
+// compiler, so reuse pass as the output index.
+for (pass = 0; pass < sizeof(numbers); pass++) {
+  PrintNumber(numbers[pass]);
+  PrintChar('\n');
+}

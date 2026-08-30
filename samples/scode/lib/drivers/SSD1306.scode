@@ -1,0 +1,168 @@
+#include "io/TwoWire"
+
+// ---------- I2C addresses ----------
+#const int OLED_ADDR_0x3C = 0x3C;
+#const int OLED_ADDR_0x3D = 0x3D;
+
+// ---------- Internal state ----------
+int oled_addr = OLED_ADDR_0x3C;
+int oled_w = 128;
+int oled_h = 64;
+int oled_pages = 8; // height / 8
+
+// ---------- Low-level I2C ----------
+void oled_command(int cmd) { i2c_write8(oled_addr, 0x00, cmd & 0xFF); }
+void oled_data(int dataByte) { i2c_write8(oled_addr, 0x40, dataByte & 0xFF); }
+
+void oled_set_pos(int page, int col) {
+  if (page < 0) page = 0;
+  if (page >= oled_pages) page = oled_pages - 1;
+  if (col < 0) col = 0;
+  if (col >= oled_w) col = oled_w - 1;
+
+  oled_command(0xB0 | (page & 0x07));        // set page
+  oled_command(0x00 | (col & 0x0F));         // lower col nibble
+  oled_command(0x10 | (col / 16));           // upper col nibble
+}
+
+// ---------- Public: begin/clear ----------
+void oled_begin(int address, int width, int height) {
+  oled_addr = address; oled_w = width; oled_h = height; oled_pages = height / 8;
+
+  oled_command(0xAE);                     // display OFF
+  oled_command(0x20); oled_command(0x02); // page addressing
+  oled_command(0xA1);                     // segment remap (flip H: A0/A1)
+  //oled_command(0xA0);                   // segment remap normal (not flipped)
+  //oled_command(0xC8);                   // COM scan dir (flip V: C0/C8)
+  oled_command(0xC0);                     // COM scan normal (not flipped)
+  oled_command(0x81); oled_command(0x7F); // contrast
+  oled_command(0xA6);                     // normal display
+  oled_command(0x8D); oled_command(0x14); // charge pump ON
+  oled_command(0xAF);                     // display ON
+
+  // clear
+  int p, c;
+  for (p = 0; p < oled_pages; p++) {
+    oled_set_pos(p, 0);
+    for (c = 0; c < oled_w; c++) { 
+      oled_data(0x00);
+    }
+  }
+}
+
+void oled_clear() {
+  int p, c;
+  for (p = 0; p < oled_pages; p++) {
+    oled_set_pos(p, 0);
+    for (c = 0; c < oled_w; c++) { 
+      oled_data(0x00);
+    }
+  }
+}
+
+// ---------- Simple primitives ----------
+void oled_fill_run(int count, int value) { while (count-- > 0) { oled_data(value & 0xFF); } }
+
+// page_from..page_to inclusive, col_from..col_to inclusive
+void oled_fill_rect(int page_from, int page_to, int col_from, int col_to, int fillByte) {
+  if (page_from < 0) page_from = 0;
+  if (page_to >= oled_pages) page_to = oled_pages - 1;
+  if (col_from < 0) col_from = 0;
+  if (col_to >= oled_w) col_to = oled_w - 1;
+  if (col_from > col_to) return;
+
+  int p;
+  int width = col_to - col_from + 1;
+  for (p = page_from; p <= page_to; p++) {
+    oled_set_pos(p, col_from);
+    oled_fill_run(width, fillByte);
+  }
+}
+
+// Horizontal line (1 page row high)
+void oled_hline(int page, int col_from, int col_to, int on) {
+  int b = on ? 0xFF : 0x00;
+  oled_fill_rect(page, page, col_from, col_to, b);
+}
+
+
+// ---------- Draw bitmap ----------
+void oled_drawBitmap(int x, int y, int w, int h, int* bmp) {
+  if (w <= 0 || h <= 0) return;
+
+  int pageStart = y / 8;
+  int pages = h / 8;
+
+  // vertical clip
+  int p0 = pageStart;
+  if (p0 < 0) { pages += p0; p0 = 0; }
+  if (p0 >= oled_pages) return;
+  if (p0 + pages > oled_pages) pages = oled_pages - p0;
+  if (pages <= 0) return;
+
+  // horizontal clip
+  int colStart = x;
+  int colEnd = x + w - 1;
+  if (colEnd < 0 || colStart >= oled_w) return;
+
+  int clipLeft = 0;
+  if (colStart < 0) { clipLeft = -colStart; colStart = 0; }
+  if (colEnd >= oled_w) colEnd = oled_w - 1;
+
+  int span = colEnd - colStart + 1;
+  if (span <= 0) return;
+
+  // Blit page by page
+  int p;
+  for (p = 0; p < pages; p++) {
+    // Source pointer for this page, with left clip applied
+    int* src = bmp + (p * w) + clipLeft;
+
+    // Set position once per page row, then stream bytes
+    oled_set_pos(p0 + p, colStart);
+
+    int i;
+    for (i = 0; i < span; i++) {
+      int b = *src & 0xFF;  // read from pointer
+      oled_data(b);
+      src = src + 1;        // advance pointer
+    }
+  }
+}
+
+// ---------- Scrolling  ----------
+void oled_scroll_left(int start_page, int end_page, int speed) {
+  if (start_page < 0) start_page = 0;
+  if (end_page   >= oled_pages) end_page = oled_pages - 1;
+  if (end_page < start_page) return;
+  if (speed < 0) speed = 0; if (speed > 7) speed = 7;
+
+  oled_command(0x27);          // LEFT horizontal scroll
+  oled_command(0x00);          // dummy
+  oled_command(start_page & 7);
+  oled_command(speed & 7);     // interval
+  oled_command(end_page & 7);
+  oled_command(0x00);          // dummy
+  oled_command(0xFF);          // dummy
+  oled_command(0x2F);          // Activate scroll
+}
+
+void oled_scroll_right(int start_page, int end_page, int speed) {
+  if (start_page < 0) start_page = 0;
+  if (end_page   >= oled_pages) end_page = oled_pages - 1;
+  if (end_page < start_page) return;
+  if (speed < 0) speed = 0; if (speed > 7) speed = 7;
+
+  oled_command(0x26);          // RIGHT horizontal scroll
+  oled_command(0x00);          // dummy
+  oled_command(start_page & 7);
+  oled_command(speed & 7);     // interval
+  oled_command(end_page & 7);
+  oled_command(0x00);          // dummy
+  oled_command(0xFF);          // dummy
+  oled_command(0x2F);          // Activate scroll
+}
+
+void oled_scroll_stop() {
+  oled_command(0x2E);          // Deactivate scroll
+}

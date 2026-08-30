@@ -1,0 +1,25 @@
+// =============================================================================
+// S-CODE SAMPLE - HEXADECIMAL COUNTER
+// =============================================================================
+// What it does:
+//   Counts from 0 to 255 and writes each value to the device-0 hex display.
+// Expected result:
+//   The display advances from 0x0000 to 0x00FF with a 500 ms delay per value.
+// Runs on:
+//   Desktop/CLI simulators and S-CPU targets exposing the device-0 display. Set
+//   FREQ_HZ to the actual target clock for accurate timing.
+// Demonstrates:
+//   Constants, a for loop, MMIO output, and delay.
+// =============================================================================
+
+#include "core/Delay"
+#include "io/DigitalWrite"
+
+const int HEX_DISPLAY = 1;
+const int DELAY_MS = 500;
+
+// Count from 0x00 to 0xFF.
+for (int value = 0; value < 256; value++) {
+  DigitalWrite(HEX_DISPLAY, value);
+  delay(DELAY_MS);
+}

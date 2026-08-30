@@ -1,0 +1,42 @@
+// -------------------------------------------------------------
+// core/random.scode
+// Simple 16-bit pseudo-random number generator (ARX variant)
+// -------------------------------------------------------------
+
+int rand_s = 0x9E37;   // Weyl constant (odd)
+int rand_x = 0xBEEF;   // internal state
+
+// Rotate left 16-bit
+int rol16(int v, int k) {
+    return ((v << k) | (v >> (16 - k))) & 0xFFFF;
+}
+
+// Initialize PRNG with seed
+void srand16(int seed) {
+    if (seed == 0) seed = 0xC0DE;     // avoid null seed
+    rand_s = (seed ^ 0x9E37) & 0xFFFF;
+    rand_x = (seed ^ 0xBEEF) & 0xFFFF;
+}
+
+// Generate 16-bit pseudo-random value
+int rand16() {
+    rand_s = (rand_s + 0x9E37) & 0xFFFF;
+    rand_x ^= rand_s;
+    rand_x = rol16(rand_x, 7);
+    rand_x = (rand_x + rand_s) & 0xFFFF;
+    return rand_x;
+}
+
+// Generate random integer in [1..max]
+int randRange(int max) {
+    if (max <= 1) return 1;
+
+    // Find smallest power of 2 >= max
+    int mask = 1;
+    while (mask < max) mask <<= 1;
+    mask -= 1;
+
+    int r;
+    do { r = rand16() & mask; } while (r >= max);
+    return r + 1; // inclusive range 1..max
+}

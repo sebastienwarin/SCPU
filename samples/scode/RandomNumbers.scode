@@ -1,0 +1,41 @@
+// =============================================================================
+// S-CODE SAMPLE - RANDOM NUMBERS
+// =============================================================================
+// What it does:
+//   Seeds the pseudo-random generator from a DS3231 and prints ten values.
+// Expected result:
+//   The LCD2004 shows ten values from 0 to 99 followed by "Done!".
+// Runs on:
+//   S-CPU TTL with the I2C DS3231 and LCD2004 peripherals.
+// Real hardware required:
+//   Yes for this sample's seed source and output device.
+// Demonstrates:
+//   Hardware-derived seeding, randRange, loops, and numeric output.
+// =============================================================================
+#include "core/Random"
+#include "core/Print"
+
+//#include "drivers/TTY"     // TTY output for Logisim simulator
+#include "drivers/HD44780"   // LCD2004 display (Hitachi HD44780 controller)
+#include "drivers/DS3231"    // Seed generation w/ RTC clock (DS3231)
+
+void main() {
+  
+  // Initialize the LCD driver
+  lcd_begin();
+  
+  // Init DS3231 & generate seed from RTC registers (time + temp)
+  rtc_begin(RTC_DS3231_ADDR);
+  srand16(rtc_getSeed16());
+
+  for (int i = 0; i < 10; i++) {
+    int randomValue = randRange(100);
+
+    PrintNumber(randomValue);
+    PrintChar(' ');
+  }
+
+  Print("Done!"); 
+}
+
+main();

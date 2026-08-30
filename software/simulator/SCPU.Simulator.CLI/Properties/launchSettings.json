@@ -1,0 +1,23 @@
+{
+  "profiles": {
+    "Shell (Interactive)": {
+      "commandName": "Project"
+    },
+    "Test: AutoTest (LED=1)": {
+      "commandName": "Project",
+      "commandLineArgs": "load \"..\\..\\..\\..\\..\\..\\samples\\asm\\AutoTest.asm\" -- run -- assert led = 1 -- shell"
+    },
+    "Run: HelloWorld.asm": {
+      "commandName": "Project",
+      "commandLineArgs": "load \"..\\..\\..\\..\\..\\..\\samples\\asm\\HelloWorld.asm\" -- run -- shell"
+    },
+    "Debug: BubbleSort.asm": {
+      "commandName": "Project",
+      "commandLineArgs": "load \"..\\..\\..\\..\\..\\..\\samples\\asm\\BubbleSort.asm\" -- debug"
+    },
+    "Debug: FibonacciRecursive.asm": {
+      "commandName": "Project",
+      "commandLineArgs": "load \"..\\..\\..\\..\\..\\..\\samples\\asm\\FibonacciRecursive.asm\" -- debug"
+    }
+  }
+}

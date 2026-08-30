@@ -1,0 +1,52 @@
+// =============================================================================
+// S-CODE SAMPLE - TSL2561 LIGHT SENSOR
+// =============================================================================
+// What it does:
+//   Reads both TSL2561 channels, computes illuminance, and displays the values.
+// Expected result:
+//   The LCD2004 refreshes CH0, CH1, and LUX twice per second.
+// Runs on:
+//   S-CPU TTL with the I2C TSL2561 and LCD2004 peripherals.
+// Real hardware required:
+//   Yes. The I2C bus, sensor, and LCD are not emulated by the simulators.
+// Demonstrates:
+//   Sensor configuration, shared driver state, calculation, and LCD output.
+// =============================================================================
+#include "core/Delay"
+#include "core/Print"
+
+#include "drivers/HD44780" 
+#include "drivers/TSL2561"
+
+void main() {
+
+  // LCD init
+  lcd_begin();
+
+  // TSL2561 init: default 402ms + 16x (required for tsl_lux())
+  tsl_begin(TSL2561_ADDR_FLOAT);
+  tsl_setSettings(TSL2561_INTEGRATIONTIME_402MS, TSL2561_GAIN_16X);
+
+  while (true) {
+    tsl_update();                 // refresh internal CH0/CH1
+    int lux = tsl_lux();          // integer lux (0 if unsupported settings)
+
+    // Line 0-1: raw channels
+    lcd_setCursor(0, 0);
+    Print("CH0: "); PrintNumber(tsl_ch0);
+    lcd_setCursor(0, 1);
+    Print("CH1: "); PrintNumber(tsl_ch1);
+
+    // Line 2: LUX (or "N/A" if settings unsupported)
+    lcd_setCursor(0, 2);
+    if (lux > 0) {
+      Print("LUX: "); PrintNumber(lux);
+    } else {
+      Print("LUX: N/A");
+    }
+
+    delay(500); // refresh 2x/s
+  }
+}
+
+main();

@@ -1,0 +1,241 @@
+#include "core/Delay"
+#include "core/String"
+
+// S-CPU TTL MMIO addresses
+#const int LCD_COMMAND = IODEV+0x201;
+#const int LCD_DATA  = IODEV+0x202;
+
+// commands
+#const int LCD_CLEARDISPLAY   = 0x01;
+#const int LCD_RETURNHOME     = 0x02;
+#const int LCD_ENTRYMODESET   = 0x04;
+#const int LCD_DISPLAYCONTROL = 0x08;
+#const int LCD_CURSORSHIFT    = 0x10;
+#const int LCD_FUNCTIONSET    = 0x20;
+#const int LCD_SETCGRAMADDR   = 0x40;
+#const int LCD_SETDDRAMADDR   = 0x80;
+
+// flags for display entry mode
+#const int LCD_ENTRYRIGHT          = 0x00;
+#const int LCD_ENTRYLEFT           = 0x02;
+#const int LCD_ENTRYSHIFTINCREMENT = 0x01;
+#const int LCD_ENTRYSHIFTDECREMENT = 0x00;
+
+// flags for display on/off control
+#const int LCD_DISPLAYON  = 0x04;
+#const int LCD_DISPLAYOFF = 0x00;
+#const int LCD_CURSORON   = 0x02;
+#const int LCD_CURSOROFF  = 0x00;
+#const int LCD_BLINKON    = 0x01;
+#const int LCD_BLINKOFF   = 0x00;
+
+// flags for display/cursor shift
+#const int LCD_DISPLAYMOVE = 0x08;
+#const int LCD_CURSORMOVE  = 0x00;
+#const int LCD_MOVERIGHT   = 0x04;
+#const int LCD_MOVELEFT    = 0x00;
+
+// flags for function set
+#const int LCD_8BITMODE   = 0x10;
+#const int LCD_4BITMODE   = 0x00;
+#const int LCD_2LINE      = 0x08;
+#const int LCD_1LINE      = 0x00;
+#const int LCD_5x10DOTS   = 0x04;
+#const int LCD_5x8DOTS    = 0x00;
+
+// LCD2004 20x4
+#const int LCD_COLS  = 20;
+#const int LCD_ROWS  = 4;
+int lcd_row_offsets[] = { 0x00, 0x40, 0x14, 0x54 };
+
+// Global variables
+bool lcd_initialized = false;
+int lcd_displayfunction = LCD_FUNCTIONSET | LCD_8BITMODE | LCD_1LINE | LCD_5x8DOTS;
+int lcd_displaycontrol;
+int lcd_displaymode;
+
+void lcd_begin() {
+
+  // Initialization
+  if(!lcd_initialized) {
+    delay(50);
+
+    // Send function set command sequence
+    lcd_write(lcd_displayfunction, false);
+    delay(10);
+
+    // second try
+    lcd_write(lcd_displayfunction, false);
+    delay(10);
+
+    // third go
+    lcd_write(lcd_displayfunction, false);
+    delay(10);
+
+    lcd_initialized = true;
+  }
+
+  // finally, set # lines, font size, etc.
+  lcd_displayfunction |= LCD_2LINE;
+  lcd_write(lcd_displayfunction, false);
+
+  // turn the display on with no cursor or blinking default
+  lcd_displaycontrol = LCD_DISPLAYON;
+  lcd_write(LCD_DISPLAYCONTROL | lcd_displaycontrol, false);
+
+  // clear it off
+  lcd_clear();
+
+  // Initialize to default text direction (for romance languages)
+  lcd_displaymode = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
+  // set the entry mode
+  lcd_write(LCD_ENTRYMODESET | lcd_displaymode, false);
+}
+
+void lcd_clear() {
+  lcd_write(LCD_CLEARDISPLAY, false); // clear display, set cursor position to zero
+  delay(10);  // this command takes a long time!
+}
+
+void lcd_home() {
+  lcd_write(LCD_RETURNHOME, false); // set cursor position to zero
+  delay(10); // this command takes a long time!
+}
+
+void lcd_setCursor(int col, int row) {
+  if ( col >= LCD_COLS ) {
+    col = LCD_COLS - 1;    // we count rows starting w/ 0
+  }
+  if ( row >= LCD_ROWS ) {
+    row = LCD_ROWS - 1;    // we count rows starting w/ 0
+  }
+  lcd_write(LCD_SETDDRAMADDR | (col + lcd_row_offsets[row]), false);
+}
+
+// Turn the display on/off (quickly)
+void lcd_noDisplay() {
+  lcd_displaycontrol &= ~LCD_DISPLAYON;
+  lcd_write(LCD_DISPLAYCONTROL | lcd_displaycontrol, false);
+}
+void lcd_display() {
+  lcd_displaycontrol |= LCD_DISPLAYON;
+  lcd_write(LCD_DISPLAYCONTROL | lcd_displaycontrol, false);
+}
+
+// Turns the underline cursor on/off
+void lcd_noCursor() {
+  lcd_displaycontrol &= ~LCD_CURSORON;
+  lcd_write(LCD_DISPLAYCONTROL | lcd_displaycontrol, false);
+}
+void lcd_cursor() {
+  lcd_displaycontrol |= LCD_CURSORON;
+  lcd_write(LCD_DISPLAYCONTROL | lcd_displaycontrol, false);
+}
+
+// Turn on and off the blinking cursor
+void lcd_noBlink() {
+  lcd_displaycontrol &= ~LCD_BLINKON;
+  lcd_write(LCD_DISPLAYCONTROL | lcd_displaycontrol, false);
+}
+void lcd_blink() {
+  lcd_displaycontrol |= LCD_BLINKON;
+  lcd_write(LCD_DISPLAYCONTROL | lcd_displaycontrol, false);
+}
+
+// These commands scroll the display without changing the RAM
+void lcd_scrollDisplayLeft() {
+  lcd_write(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVELEFT, false);
+}
+void lcd_scrollDisplayRight() {
+  lcd_write(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVERIGHT, false);
+}
+
+// This is for text that flows Left to Right
+void lcd_leftToRight() {
+  lcd_displaymode |= LCD_ENTRYLEFT;
+  lcd_write(LCD_ENTRYMODESET | lcd_displaymode, false);
+}
+
+// This is for text that flows Right to Left
+void lcd_rightToLeft() {
+  lcd_displaymode &= ~LCD_ENTRYLEFT;
+  lcd_write(LCD_ENTRYMODESET | lcd_displaymode, false);
+}
+
+// This will 'right justify' text from the cursor
+void lcd_autoscroll() {
+  lcd_displaymode |= LCD_ENTRYSHIFTINCREMENT;
+  lcd_write(LCD_ENTRYMODESET | lcd_displaymode, false);
+}
+
+// This will 'left justify' text from the cursor
+void lcd_noAutoscroll() {
+  lcd_displaymode &= ~LCD_ENTRYSHIFTINCREMENT;
+  lcd_write(LCD_ENTRYMODESET | lcd_displaymode, false);
+}
+
+// Print char
+void PrintChar(char c) {  // for core/print implementation
+  lcd_write((int)c, true);
+}
+
+void lcd_print(char c) {
+  lcd_write((int)c, true);
+}
+
+void lcd_centerText(int row, string str) {
+  int len = strlen(str);
+  int pad = 0, i = 0;
+  if (len < LCD_COLS) {
+    pad = (LCD_COLS - len) / 2;
+  }
+  lcd_setCursor(0, row);
+  for (i = 0; i < pad; i++) {
+    lcd_print(' ');
+  }
+  Print(str);
+  for (i = 0; i < (LCD_COLS - pad - len); i++) {
+    lcd_print(' ');
+  }
+}
+
+// function write_lcd(int value, bool datamode)
+//  Bit1 = Enable (E)
+//          LCD_COMMAND & 0x2 if enable
+//  Bit0 = Register Select (RS) : LOW = COMMAND, HIGH = DATA
+//          LCD_COMMAND & 0x1 if DATA else COMMAND
+void lcd_write(int value, bool datamode) {
+  asm("
+      ; Get arguments
+      lds #3, R0 ; R0 = value
+      lds #4, R1 ; R1 = datamode (false = command, true = data)
+
+      ; Set Register select
+      mov LCD_COMMAND, R1 ; RS=MODE & E=LOW
+      nop
+      nop
+
+      ; Set data
+      mov LCD_DATA, R0
+      nop
+      nop
+      
+      ; Pulse Enable
+      lda R1
+      add #2          ; E=HIGH
+      sta LCD_COMMAND ; E=HIGH & RS=MODE
+      nop
+      nop  
+      mov LCD_COMMAND, R1 ; E=LOW & RS=MODE
+      nop
+      nop
+      nop
+      nop
+      nop
+      nop
+      nop
+      nop
+      nop
+      nop
+    ");
+}

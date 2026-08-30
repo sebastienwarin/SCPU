@@ -1,0 +1,38 @@
+// =============================================================================
+// S-CODE SAMPLE - DIGITAL INPUTS
+// =============================================================================
+// What it does:
+//   Reads the device-3 input board in Digital and shows the button state on the
+//   LEDs. Switch 7 acts as a display toggle: when it is on, the button nibble is
+//   inverted before being shown.
+// Expected result:
+//   Buttons 0-3 are shown on the lower nibble. When switch 7 is on, the button
+//   nibble is inverted.
+// Runs on:
+//   Digital, or the physical S-CPU TTL with the device-3 input board.
+// Real hardware required:
+//   No for Digital.
+// Demonstrates:
+//   DigitalRead, bit masks, conditional control flow, and DigitalWrite.
+// =============================================================================
+
+#include "io/DigitalRead"
+#include "io/DigitalWrite"
+
+// DigitalRead/Write add the IODEV base internally, so these are MMIO offsets.
+#const int LED_BANK = 0x002;    // device 0, register 2: LED bank
+#const int INPUT_BOARD = 0x301; // device 3, register 1: input board
+
+// Bit 7 toggles the button-nibble inversion.
+#const int INVERT_MASK = 1 << 7;
+
+while (true) {
+  int rawInput = DigitalRead(INPUT_BOARD);
+  int buttonBits = rawInput & 0x0F;
+
+  if ((rawInput & INVERT_MASK) != 0) {
+    buttonBits = (~buttonBits) & 0x0F;
+  }
+
+  DigitalWrite(LED_BANK, buttonBits);
+}

@@ -1,0 +1,81 @@
+name: Software Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  code: read
+  releases: write
+
+jobs:
+  build-test-package-release:
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/dotnet/sdk:10.0
+
+    steps:
+      - name: Install Actions and packaging tools
+        run: |
+          apt-get update
+          apt-get install --yes --no-install-recommends \
+            curl \
+            fonts-dejavu \
+            fonts-liberation \
+            fonts-noto-color-emoji \
+            git \
+            nodejs \
+            pandoc \
+            weasyprint \
+            zip
+
+      - name: Check out repository and tags
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate tag and project version
+        run: bash software/scripts/validate-release-version.sh "${{ gitea.ref_name }}"
+
+      - name: Restore
+        run: dotnet restore software/SCPU.sln -p:Platform="Any CPU"
+
+      - name: Build
+        run: >-
+          dotnet build software/SCPU.sln
+          --configuration Release
+          --no-restore
+          -p:Platform="Any CPU"
+
+      - name: Test
+        run: >-
+          dotnet test software/SCPU.sln
+          --configuration Release
+          --no-build
+          --no-restore
+          -p:Platform="Any CPU"
+          --logger "console;verbosity=normal"
+
+      - name: Publish and package all platforms
+        run: bash software/scripts/package-release.sh "${{ gitea.ref_name }}"
+
+      - name: Build documentation PDF
+        run: |
+          version="${{ gitea.ref_name }}"
+          version="${version#v}"
+          bash docs/build-pdf.sh \
+            "artifacts/release/scpu-documentation-$version.pdf" \
+            "$version"
+          (
+            cd artifacts/release
+            sha256sum ./*.zip ./*.pdf > SHA256SUMS
+          )
+
+      - name: Create Gitea release and upload files
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          GITEA_SERVER_URL: ${{ gitea.server_url }}
+          GITEA_REPOSITORY: ${{ gitea.repository }}
+          RELEASE_TAG: ${{ gitea.ref_name }}
+          RELEASE_SHA: ${{ gitea.sha }}
+        run: bash software/scripts/publish-gitea-release.sh

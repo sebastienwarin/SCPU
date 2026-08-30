@@ -1,0 +1,30 @@
+// =============================================================================
+// S-CODE SAMPLE - FUNCTIONS
+// =============================================================================
+// What it does:
+//   Calls a function with parameters and computes 5! with a recursive function.
+// Expected result:
+//   The terminal prints "sum = 42" followed by "factorial = 120".
+// Runs on:
+//   Desktop/CLI simulators and S-CPU targets with the TTY device.
+// Demonstrates:
+//   Parameters, return values, nested calls, stack frames, and recursion.
+// =============================================================================
+
+#include "core/Print"
+#include "drivers/TTY"
+
+int Add(int left, int right) {
+  return left + right;
+}
+
+int Factorial(int value) {
+  if (value <= 1) return 1;              // base case stops the recursion
+  return value * Factorial(value - 1);   // recursive case uses a smaller input
+}
+
+Print("sum = ");
+PrintNumber(Add(12, 30));
+Print("\nfactorial = ");
+PrintNumber(Factorial(5));
+Print("\n");

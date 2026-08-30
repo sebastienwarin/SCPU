@@ -1,0 +1,50 @@
+#include "io/TwoWire"
+
+#const int RTC_DS3231_ADDR = 0x68;
+static int rtc_addr = RTC_DS3231_ADDR;
+
+// ---------------- Internal state ----------------
+static int rtc_sec  = 0;
+static int rtc_min  = 0;
+static int rtc_hour = 0;
+static int rtc_day  = 0;
+static int rtc_mon  = 0;
+static int rtc_year = 0; // 0..99
+
+// ---------------- Helpers ----------------
+int _bcd_to_bin(int bcd) {
+    int hi = (bcd & 0xF0) / 16;
+    int lo =  bcd & 0x0F;
+    return hi * 10 + lo;
+}
+int _rtc_r8(int reg) {
+    return i2c_read8(rtc_addr, reg) & 0xFF;
+}
+
+// ---------------- Public API ----------------
+
+// Initialize the driver and set I2C address
+void rtc_begin(int address) {
+  rtc_addr = address;
+  // nothing else to configure on DS3231 for basic time/temperature
+}
+
+// Read current time/date from the RTC and update internal statics
+void rtc_update() {
+  rtc_sec  = _bcd_to_bin(_rtc_r8(0x00) & 0x7F);
+  rtc_min  = _bcd_to_bin(_rtc_r8(0x01) & 0x7F);
+  rtc_hour = _bcd_to_bin(_rtc_r8(0x02) & 0x3F);
+  rtc_day  = _bcd_to_bin(_rtc_r8(0x04) & 0x3F);
+  rtc_mon  = _bcd_to_bin(_rtc_r8(0x05) & 0x1F);
+  rtc_year = _bcd_to_bin(_rtc_r8(0x06) & 0xFF);
+}
+
+// Generate a seed from RTC registers (time + temp)
+int rtc_getSeed16() {
+  int seed = 0xC0DE;
+  seed ^= _rtc_r8(0x00) | (_rtc_r8(0x01) << 8);
+  seed ^= _rtc_r8(0x02) | (_rtc_r8(0x04) << 8);
+  seed ^= _rtc_r8(0x05) | (_rtc_r8(0x06) << 8);
+  seed ^= _rtc_r8(0x11) | (_rtc_r8(0x12) << 8);
+  return seed & 0xFFFF;
+}

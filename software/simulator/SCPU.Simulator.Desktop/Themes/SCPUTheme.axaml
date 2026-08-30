@@ -1,0 +1,147 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Styles.Resources>
+    <Color x:Key="ScpuBackgroundColor">#0A0F18</Color>
+    <Color x:Key="ScpuPanelColor">#111A28</Color>
+    <Color x:Key="ScpuRaisedColor">#182537</Color>
+    <Color x:Key="ScpuBorderColor">#2B415A</Color>
+    <Color x:Key="ScpuCyanColor">#39D5E8</Color>
+    <Color x:Key="ScpuAmberColor">#F3C969</Color>
+    <Color x:Key="ScpuGreenColor">#67D9A8</Color>
+    <Color x:Key="ScpuListHoverColor">#17283A</Color>
+    <Color x:Key="ScpuListSelectedColor">#203A50</Color>
+    <SolidColorBrush x:Key="ScpuBackground" Color="{StaticResource ScpuBackgroundColor}"/>
+    <SolidColorBrush x:Key="ScpuPanel" Color="{StaticResource ScpuPanelColor}"/>
+    <SolidColorBrush x:Key="ScpuRaised" Color="{StaticResource ScpuRaisedColor}"/>
+    <SolidColorBrush x:Key="ScpuBorder" Color="{StaticResource ScpuBorderColor}"/>
+    <SolidColorBrush x:Key="ScpuCyan" Color="{StaticResource ScpuCyanColor}"/>
+    <SolidColorBrush x:Key="ScpuAmber" Color="{StaticResource ScpuAmberColor}"/>
+    <SolidColorBrush x:Key="ScpuGreen" Color="{StaticResource ScpuGreenColor}"/>
+    <SolidColorBrush x:Key="ScpuListHover" Color="{StaticResource ScpuListHoverColor}"/>
+    <SolidColorBrush x:Key="ScpuListSelected" Color="{StaticResource ScpuListSelectedColor}"/>
+  </Styles.Resources>
+  <Style Selector="Window">
+    <Setter Property="Background" Value="{StaticResource ScpuBackground}"/>
+  </Style>
+  <Style Selector="Border.toolPanel">
+    <Setter Property="Background" Value="{StaticResource ScpuPanel}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource ScpuBorder}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="3"/>
+    <Setter Property="Padding" Value="12"/>
+  </Style>
+  <Style Selector="Border.bottomToolPanel">
+    <Setter Property="Margin" Value="-10,0,0,0"/>
+  </Style>
+  <Style Selector="TextBlock.panelTitle">
+    <Setter Property="Foreground" Value="{StaticResource ScpuCyan}"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="FontSize" Value="13"/>
+  </Style>
+  <Style Selector="TextBlock.mono">
+    <Setter Property="FontFamily" Value="Cascadia Mono,Consolas,monospace"/>
+  </Style>
+  <Style Selector="TextBlock.mono.dataWord">
+    <Setter Property="Opacity" Value="0.55"/>
+  </Style>
+  <!-- Debugger data surfaces use one cool, neutral canvas. The stock Fluent
+       ListBox background is deliberately removed to avoid warm grey islands. -->
+  <Style Selector="ListBox">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+  </Style>
+  <Style Selector="ListBoxItem:pointerover /template/ Border#PART_LayoutRoot">
+    <Setter Property="Background" Value="{StaticResource ScpuListHover}"/>
+  </Style>
+  <Style Selector="ListBoxItem:selected /template/ Border#PART_LayoutRoot">
+    <Setter Property="Background" Value="{StaticResource ScpuListSelected}"/>
+  </Style>
+  <Style Selector="ListBoxItem:selected:pointerover /template/ Border#PART_LayoutRoot">
+    <Setter Property="Background" Value="{StaticResource ScpuListSelected}"/>
+  </Style>
+  <Style Selector="MenuItem">
+    <Setter Property="Padding" Value="12,5"/>
+  </Style>
+  <Style Selector="TextBlock.romPcMarker, TextBlock.sourcePcMarker">
+    <Setter Property="Foreground" Value="{StaticResource ScpuCyan}"/>
+  </Style>
+  <Style Selector="TextBlock.debuggerMarker">
+    <Setter Property="Width" Value="24"/>
+    <Setter Property="Height" Value="20"/>
+    <Setter Property="FontSize" Value="12"/>
+    <Setter Property="LineHeight" Value="20"/>
+    <Setter Property="TextAlignment" Value="Center"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+  <Style Selector="TextBlock.breakpointMarker">
+    <Setter Property="Foreground" Value="#F0525F"/>
+  </Style>
+  <Style Selector="TextBlock.breakpointHint">
+    <Setter Property="Foreground" Value="#F0525F"/>
+    <Setter Property="Opacity" Value="0"/>
+  </Style>
+  <Style Selector="Button.breakpointGutter:pointerover TextBlock.breakpointHint">
+    <Setter Property="Opacity" Value="0.42"/>
+  </Style>
+  <Style Selector="Button.breakpointGutter:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent"/>
+  </Style>
+  <Style Selector="TextBlock.romPcMarker.breakpoint, TextBlock.sourcePcMarker.breakpoint">
+    <Setter Property="Foreground" Value="#F0525F"/>
+  </Style>
+  <Style Selector="Button.toolWindowChevron">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Foreground" Value="{StaticResource ScpuCyan}"/>
+    <Setter Property="Padding" Value="0"/>
+  </Style>
+  <Style Selector="Button.toolWindowChevron:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource ScpuRaised}"/>
+  </Style>
+  <Style Selector="Button.toolWindowTab">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Foreground" Value="{StaticResource ScpuCyan}"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+  </Style>
+  <Style Selector="Button.toolWindowTab:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource ScpuRaised}"/>
+  </Style>
+  <Style Selector="Button.linkButton">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="Foreground" Value="{StaticResource ScpuCyan}"/>
+    <Setter Property="HorizontalContentAlignment" Value="Left"/>
+  </Style>
+  <Style Selector="Button.linkButton:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="TextBlock.TextDecorations" Value="Underline"/>
+  </Style>
+  <Style Selector="Button.primaryAction">
+    <Setter Property="Background" Value="{StaticResource ScpuCyan}"/>
+    <Setter Property="Foreground" Value="#081018"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="Padding" Value="14,5"/>
+    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+    <Setter Property="VerticalContentAlignment" Value="Center"/>
+  </Style>
+  <Style Selector="Button.modalCloseButton">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="Foreground" Value="{StaticResource ScpuCyan}"/>
+    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+    <Setter Property="VerticalContentAlignment" Value="Center"/>
+  </Style>
+  <Style Selector="Button.modalCloseButton:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#33F0525F"/>
+  </Style>
+  <Style Selector="TabItem:selected /template/ Border#PART_SelectedPipe">
+    <Setter Property="IsVisible" Value="False"/>
+  </Style>
+  <Style Selector="Border#TerminalSurface:focus">
+    <Setter Property="BorderBrush" Value="{StaticResource ScpuCyan}"/>
+    <Setter Property="BorderThickness" Value="2"/>
+  </Style>
+</Styles>

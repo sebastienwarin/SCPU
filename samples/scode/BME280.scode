@@ -1,0 +1,54 @@
+// =============================================================================
+// S-CODE SAMPLE - BME280 SENSOR
+// =============================================================================
+// What it does:
+//   Initializes a BME280 and displays its raw temperature, pressure, and humidity.
+// Expected result:
+//   The LCD2004 shows the sensor ID and refreshes three raw readings twice per
+//   second.
+// Runs on:
+//   S-CPU TTL with the I2C BME280 and LCD2004 peripherals.
+// Real hardware required:
+//   Yes. The I2C bus, sensor, and LCD are not emulated by the simulators.
+// Demonstrates:
+//   Sensor initialization, driver state updates, and formatted LCD output.
+// =============================================================================
+#include "core/Delay"
+#include "core/Print"
+
+#include "drivers/HD44780" 
+#include "drivers/BME280"
+
+void main() {
+
+  // LCD init
+  lcd_begin();
+
+  // BME280 init (pick your address: 0x76 or 0x77)
+  bme_begin(BME280_ADDR_SDO_LOW);
+
+  // Keep the chip ID on the fourth row while the measurements refresh above it.
+  lcd_setCursor(0, 3);
+  Print("BME280 ID: ");
+  PrintNumber(bme_id8());
+
+  while (true) {
+    bme_update();
+
+    // Lines 0-2: raw measurements as returned by the driver.
+    lcd_setCursor(0, 0);
+    Print("Temperature: "); PrintNumber(bme_rawTemp());
+
+    // Line 1: Pressure
+    lcd_setCursor(0, 1);
+    Print("Pressure: "); PrintNumber(bme_rawPress());
+
+    // Line 2: raw H
+    lcd_setCursor(0, 2);
+    Print("Humidity: ");  PrintNumber(bme_rawHum());
+
+    delay(500); // refresh
+  }
+}
+
+main();

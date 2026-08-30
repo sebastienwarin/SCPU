@@ -1,0 +1,8 @@
+void DigitalWrite(int address, int value) {
+  asm("
+    LDS #3          ; LDS #3 = address
+    ADD #(IODEV)
+    STA R0
+    LDS #4, @(R0)   ; LDS #4 = value
+  ");
+}

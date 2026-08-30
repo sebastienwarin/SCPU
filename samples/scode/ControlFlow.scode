@@ -1,0 +1,49 @@
+// =============================================================================
+// S-CODE SAMPLE - CONTROL FLOW
+// =============================================================================
+// What it does:
+//   Combines a for loop, continue, a while loop, if/else, and switch/case.
+// Expected result:
+//   The terminal prints three lines ending with the value 11 and two "ok"
+//   messages.
+// Runs on:
+//   Desktop/CLI simulators and S-CPU targets with the TTY device.
+// Demonstrates:
+//   for, while, if/else, switch/case, break, and continue.
+// =============================================================================
+
+#include "core/Print"
+#include "drivers/TTY"
+
+int total = 0;
+
+// `continue` skips only the current iteration: 0 + 1 + 3 + 4 = 8.
+for (int i = 0; i < 5; i++) {
+  if (i == 2) continue;
+  total += i;
+}
+
+int extra = 0;
+// A while loop is useful when the number of iterations is state-driven.
+while (extra < 3) {
+  total++;
+  extra++;
+}
+
+Print("total = ");
+PrintNumber(total);
+Print("\n");
+
+// if/else selects between two paths from a boolean condition.
+if (total == 11) Print("if: ok\n");
+else Print("if: failed\n");
+
+// switch selects a case from one integer expression; break exits the switch.
+switch (total) {
+  case 11:
+    Print("switch: ok\n");
+    break;
+  default:
+    Print("switch: failed\n");
+    break;
+}

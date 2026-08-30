@@ -1,0 +1,6 @@
+# --- .NET build artefacts ---
+**/bin/
+**/obj/
+*.user
+*.suo
+*.cache/

@@ -1,0 +1,15 @@
+{
+  "profiles": {
+    "Launch Simulator": {
+      "commandName": "Project"
+    },
+    "Load AutoTest.asm": {
+      "commandName": "Project",
+      "commandLineArgs": "\"..\\..\\..\\..\\..\\..\\samples\\asm\\AutoTest.asm\""
+    },
+    "Load HelloWorld.scode": {
+      "commandName": "Project",
+      "commandLineArgs": "\"..\\..\\..\\..\\..\\..\\samples\\scode\\HelloWorld.scode\""
+    }
+  }
+}

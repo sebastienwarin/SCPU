@@ -1,0 +1,106 @@
+// =============================================================================
+// S-CODE SAMPLE - LCD MENU
+// =============================================================================
+// What it does:
+//   Presents a three-item LCD2004 menu controlled by four debounced buttons.
+// Expected result:
+//   UP/DOWN select an item, SELECT runs the hello/cursor/scroll action, and BACK
+//   returns to the menu.
+// Runs on:
+//   S-CPU TTL with the LCD2004 and physical input board.
+// Real hardware required:
+//   Yes. The LCD and button board are not emulated by the software simulators.
+// Demonstrates:
+//   Driver composition, edge-based input, menu state, functions, and strings.
+// =============================================================================
+
+#include "core/Delay"
+#include "core/Print"
+#include "core/String"
+#include "io/Buttons"
+#include "drivers/HD44780"
+
+// btn_getPressedEdges adds IODEV internally: device 3, register 1.
+#const int INPUT_BOARD = 0x301;
+
+#const int BTN_UP     = 1 << 3;  // BTN2
+#const int BTN_DOWN   = 1 << 6;  // BTN5
+#const int BTN_SELECT = 1 << 4;  // BTN3
+#const int BTN_BACK   = 1 << 2;  // BTN1
+//#const int BTN_LEFT   = 1 << 5;  // BTN4
+//#const int BTN_RIGHT  = 1 << 7;  // BTN6
+
+// Menu state
+#const int MENU_COUNT = 3;
+int menuIndex = 0;
+bool cursorOn  = false;  // track cursor/blink state
+
+// Draw the whole menu (3 items)
+void drawMenu()
+{
+  lcd_clear();
+
+  // Row 0..2: items, Row 3: hint
+  lcd_setCursor(0,0); Print((menuIndex==0) ? "> Hello"           : "  Hello");
+  lcd_setCursor(0,1); Print((menuIndex==1) ? "> Cursor toggle"   : "  Cursor toggle");
+  lcd_setCursor(0,2); Print((menuIndex==2) ? "> Scroll demo"     : "  Scroll demo");
+}
+
+// Run the selected action; BACK returns to menu
+void runAction(int idx)
+{
+  if (idx == 0) {
+    // Hello message
+    lcd_clear();
+    lcd_setCursor(0,1); Print("Hello S-CPU!");
+    lcd_setCursor(0,3); Print("Press BACK...");
+    while ((btn_getPressedEdges(INPUT_BOARD) & BTN_BACK) == 0) delay(10);
+  }
+  else if (idx == 1) {
+    // Toggle cursor + blink
+    cursorOn = !cursorOn;
+    if (cursorOn) { lcd_cursor(); lcd_blink(); }
+    else          { lcd_noCursor(); lcd_noBlink(); }
+    // Brief feedback
+    lcd_setCursor(0,3); Print(cursorOn ? "Cursor ON " : "Cursor OFF");
+    delay(500);
+  }
+  else if (idx == 2) {
+    // Small scroll demo (left then right)
+    lcd_clear();
+    lcd_setCursor(0,1); Print("Scrolling...");
+    int i;
+    for (i=0; i<6;  i++) { lcd_scrollDisplayLeft();  delay(180); }
+    for (i=0; i<6;  i++) { lcd_scrollDisplayRight(); delay(180); }
+    lcd_setCursor(0,3); Print("Press BACK...");
+    while ((btn_getPressedEdges(INPUT_BOARD) & BTN_BACK) == 0) delay(10);
+  }
+}
+
+void main()
+{
+  // LCD init
+  lcd_begin();
+  lcd_clear();
+
+  // Buttons init (debounce baseline)
+  btn_init();
+
+  drawMenu();
+
+  while (true) {
+    // One-shot events (no LCD spam)
+    int edges = btn_getPressedEdges(INPUT_BOARD);
+
+    if ((edges & BTN_UP) != 0)   { menuIndex = (menuIndex + MENU_COUNT - 1) % MENU_COUNT; drawMenu(); }
+    if ((edges & BTN_DOWN) != 0) { menuIndex = (menuIndex + 1) % MENU_COUNT;              drawMenu(); }
+    if ((edges & BTN_SELECT) != 0) {
+      runAction(menuIndex);
+      drawMenu();   // redraw menu after action returns
+    }
+
+    delay(10); // ~10 ms sampling → debounce ≈ 30 ms (BTN_SAMPLES=3)
+  }
+}
+
+main();

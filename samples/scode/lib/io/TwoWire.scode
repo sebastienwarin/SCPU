@@ -1,0 +1,64 @@
+#include "../../../asm/common/I2C.asm"
+extern int i2c_read_byte(int data);   // return data
+extern bool i2c_send_byte(int data);  // return ack
+extern void i2c_start();
+extern void i2c_stop();
+
+int i2c_read8(int address, int reg)
+{
+  address <<= 1;
+  // Start i²c transmission
+  i2c_start();
+  // Send device address
+  i2c_send_byte(address);
+  // Send register address
+  i2c_send_byte(reg);
+  // Restart i²c transmission
+  i2c_start();
+  // Send device address (read)
+  i2c_send_byte(address | 1);
+  // Read value
+  int value = i2c_read_byte(1); // 1 = nack
+  // Stop transmission
+  i2c_stop();
+  // Return lsb
+  return value & 0xFF;
+}
+
+int i2c_read16(int address, int reg)
+{
+  address <<= 1;
+  // Start i²c transmission
+  i2c_start();
+  // Send device address
+  i2c_send_byte(address);
+  // Send register address
+  i2c_send_byte(reg);
+  // Restart i²c transmission
+  i2c_start();
+  // Send device address (read)
+  i2c_send_byte(address | 1);
+  // Read MSB
+  int msb = i2c_read_byte(0); // 0 = ack
+  // Read LSB
+  int lsb = i2c_read_byte(1); // 1 = nack
+  // Stop transmission
+  i2c_stop();
+  // Combine lsb/msb
+  return msb << 8 | lsb;
+}
+
+void i2c_write8(int address, int reg, int value)
+{
+  address <<= 1;
+  // Start i²c transmission
+  i2c_start();
+  // Send device address
+  i2c_send_byte(address);
+  // Send register address
+  i2c_send_byte(reg);
+  // Send data value
+  i2c_send_byte(value);
+  // Stop transmission
+  i2c_stop();
+}

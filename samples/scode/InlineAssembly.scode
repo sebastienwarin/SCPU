@@ -1,0 +1,28 @@
+// =============================================================================
+// S-CODE SAMPLE - INLINE ASSEMBLY
+// =============================================================================
+// What it does:
+//   Executes a short assembly block from S-Code to write directly to MMIO.
+// Expected result:
+//   The device-0 hexadecimal display shows 42 (0x002A), and the terminal prints
+//   "inline asm: done".
+// Runs on:
+//   Desktop/CLI simulators and targets with the device-0 display and TTY.
+// Demonstrates:
+//   asm(), native S-CPU instructions, and mixing S-Code with assembly.
+// =============================================================================
+
+#include "core/Print"
+#include "drivers/TTY"
+
+void WriteAnswer() {
+  // asm() inserts native assembler instructions at this exact point. It is
+  // useful for hardware access or operations not directly exposed by S-Code.
+  asm("
+    LDA #42       ; load the accumulator
+    STA IODEV+1   ; write device 0's hexadecimal display register
+  ");
+}
+
+WriteAnswer();
+Print("inline asm: done\n");

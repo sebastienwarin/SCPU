@@ -1,0 +1,15 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SCPU.Simulator.Desktop.GotoAddressWindow"
+        Title="Go to address or symbol" Icon="/Assets/favicon.ico"
+        Width="430" Height="170" CanResize="False" WindowStartupLocation="CenterOwner">
+  <Grid Margin="18" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
+    <TextBlock x:Name="PromptText" Text="Address or symbol"/>
+    <TextBox x:Name="AddressBox" Grid.Row="1" Watermark="Examples: 0030, 0x0030, label"/>
+    <TextBlock x:Name="ErrorText" Grid.Row="2" Foreground="#F06A7A" TextWrapping="Wrap"/>
+    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Cancel" Click="OnCancel"/>
+      <Button x:Name="AcceptButton" Content="Go" IsDefault="True" Click="OnAccept"/>
+    </StackPanel>
+  </Grid>
+</Window>

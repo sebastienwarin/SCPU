@@ -1,0 +1,95 @@
+// Debounced button handling and edge detection (active-low).
+// Requires a 16-bit MMIO device providing input bits.
+// Sampling expected every ~10 ms.
+
+#include "core/Delay"
+#include "io/DigitalRead"
+
+#const int BTN_BITS     = 8;    // number of bits to debounce
+#const int BTN_SAMPLES  = 3;    // number of stable samples to confirm (~30ms @ 10ms/sample)
+
+// Internal state
+static int btn_counters[8];
+static int btn_state = 0xFFFF;    // debounced state (1 = released, active-low)
+static int btn_prev  = 0xFFFF;    // previous debounced state
+
+// -------------------------------------------------------------
+// Initialization
+// -------------------------------------------------------------
+void btn_init()
+{
+  for (int i = 0; i < BTN_BITS; i++) { 
+    btn_counters[i] = 0;
+  }
+  btn_state = 0xFFFF;
+  btn_prev  = 0xFFFF;
+}
+
+// -------------------------------------------------------------
+// Debounce raw 16-bit input
+// -------------------------------------------------------------
+int btn_debounce(int raw)
+{
+  for (int b = 0; b < BTN_BITS; b++) {
+    int mask = 1 << b;
+
+    int rawBit   = (raw & mask) != 0;
+    int stateBit = (btn_state & mask) != 0;
+
+    if (rawBit == stateBit) {
+      btn_counters[b] = 0;
+    } else {
+      btn_counters[b] += 1;
+      if (btn_counters[b] >= BTN_SAMPLES) {
+        if (rawBit) btn_state |=  mask;
+        else        btn_state &= ~mask;
+        btn_counters[b] = 0;
+      }
+    }
+  }
+  return btn_state;
+}
+
+// -------------------------------------------------------------
+// Read, debounce, and return stable 16-bit input value
+// -------------------------------------------------------------
+int btn_readStable(int deviceOffset)
+{
+  int raw = DigitalRead(deviceOffset);
+  return btn_debounce(raw);
+}
+
+// -------------------------------------------------------------
+// Return mask of buttons that went RELEASED -> PRESSED (active-low)
+// -------------------------------------------------------------
+int btn_getPressedEdges(int deviceOffset)
+{
+  int stable = btn_readStable(deviceOffset);
+  int prevPressed = ~btn_prev;
+  int currPressed = ~stable;
+  int edges = (currPressed & ~prevPressed);
+  btn_prev = stable;
+  return edges;
+}
+
+// -------------------------------------------------------------
+// Return mask of buttons that went PRESSED -> RELEASED
+// -------------------------------------------------------------
+int btn_getReleasedEdges(int deviceOffset)
+{
+  int stable = btn_readStable(deviceOffset);
+  int prevPressed = ~btn_prev;
+  int currPressed = ~stable;
+  int edges = (prevPressed & ~currPressed);
+  btn_prev = stable;
+  return edges;
+}
+
+// -------------------------------------------------------------
+// Return 1 if button is currently pressed (debounced, active-low)
+// -------------------------------------------------------------
+int btn_isPressed(int deviceOffset, int mask)
+{
+  int stable = btn_readStable(deviceOffset);
+  return ((~stable) & mask) != 0;
+}

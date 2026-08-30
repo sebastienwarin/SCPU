@@ -1,0 +1,22 @@
+# --- OS / Editor ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# --- Generic binaries ---
+*.exe
+*.dll
+*.so
+*.dylib
+*.bin
+*.elf
+*.map
+*.rom
+/artifacts/
+
+# --- IDE / Editors ---
+.vscode/
+.idea/
+*.suo
+*.user

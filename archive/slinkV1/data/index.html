@@ -1,0 +1,486 @@
+<!doctype html>
+<html ng-app="slink">
+  <head>
+    <title>S-CPU Link</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <style>
+      .icon-link {
+        text-decoration: none;
+        border: none;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="container">
+      <hgroup>
+        <h1>💻 S-Link</h1>
+        <p>The S-CPU companion</p>
+      </hgroup>
+    </header>
+
+    <main class="container" ng-class="{'modal-is-open': confirmationBox.open }" ng-controller="MainController">
+      <div class="grid">
+        <article>
+          <header>🚀 Main control</header>
+          <div ng-show="status.job && status.job.active">
+            <span aria-busy="true">Flashing {{status.job.filename}}... {{status.job.written}} / {{status.job.totalSize}} bytes</span>
+            <progress value="{{100 * (status.job.written / status.job.totalSize)}}" max="100"></progress>
+          </div>
+          <p>Power:</p>
+          <div role="group">
+              <button ng-hide="status.state" ng-attr-aria-busy="false" ng-click="setPowerState(true)">⚡ Turn On</button>
+              <button ng-show="status.state" ng-disabled="status.progmode" ng-click="setPowerState(false)">🔌 Turn Off</button>
+              <button ng-disabled="!status.state || status.progmode" ng-click="resetScpu()" class="contrast">↻ Reset</button>
+          </div>
+          <p>Clock:</p>
+          <div role="group">
+            <button ng-hide="status.clock.auto" ng-disabled="!status.state || status.progmode || status.clock.source != 1" ng-attr-aria-busy="false" ng-click="setClock('start')">Run ▶️</button>
+            <button ng-show="status.clock.auto" ng-disabled="!status.state || status.progmode || status.clock.source != '1" ng-attr-aria-busy="false" ng-click="setClock('pause')">Pause ⏸️</button>
+            <button ng-disabled="!status.state || status.progmode || status.clock.auto || status.clock.source != 1" ng-click="setClock('full')" class="secondary">Full Tick</button>
+            <button ng-disabled="!status.state || status.progmode || status.clock.auto || status.clock.source != 1" ng-click="setClock('half')" class="contrast">Half Tick</button>
+          </div>
+        </article>
+
+        <article>
+          <header>⏰ Clock signal</header>
+          <label for="clock_source">Source:</label>
+          <select id="clock_source" required
+                    ng-change="updateClock()"
+                    ng-model="status.clock.source">
+            <option ng-selected="status.clock.source == item.value" ng-repeat="item in clock_sources" ng-value="item.value">{{item.label}}</option>
+          </select>
+          
+          <label for="clock_frequency">Frequency:</label>
+          <select id="clock_frequency" required
+                    ng-change="updateClock()"
+                    ng-disabled="status.clock.source != 1"
+                    ng-model="status.clock.frequency">
+            <option ng-selected="status.clock.frequency == item.value" ng-repeat="item in clock_frequencies" ng-value="item.value">{{item.label}}</option>
+          </select>          
+      </div>
+
+      <article>
+        <header>💾 ROM management</header>
+        <p>Available ROM:</p>
+        <table class="striped">
+          <thead>
+            <tr>
+              <th scope="col">File</th>
+              <th scope="col">Size</th>
+              <th scope="col">Last Modified</th>
+              <th scope="col">Delete</th>
+              <th scope="col">Flash</th>
+            </tr>
+          </thead>
+          <tbody id="roms">
+            <tr>
+              <tr ng-repeat="file in roms.files">
+                <th scope="row">
+                  <span ng-if="!file.editing">
+                    {{file.path}}
+                    <a href="#" ng-click="enableEdit(file)" title="Rename" class="icon-link"><small>✏️</small></a>
+                  </span>
+                  <input type="text"
+                        ng-if="file.editing"
+                        ng-model="file.newName"
+                        focus-me="file.editing"
+                        ng-blur="cancelEdit(file)"
+                        ng-keydown="handleRenameKey($event, file)"
+                        autofocus />
+                </th>
+                <td>{{file.size}}</td>
+                <td>{{ file.lastwrite * 1000 | date:'dd/MM/yyyy @ HH:mm:ss' }}</td>
+                <td><a href="#" ng-click="deleteRom(file)" class="icon-link"><small>🗑️</small></a></td>
+                <td><a href="#" ng-click="flashRom(file)" class="icon-link"><small>⚡</small></a></td>
+              </tr>
+              <td ng-show="!roms.files.length" colspan="4"><i>No ROM available</i></td>
+              <td ng-show="!roms" colspan="4"><span aria-busy="true">Loading...</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <p>Upload ROM:</p>
+        <form method="POST" action="/upload" enctype="multipart/form-data" role="group">
+          <fieldset>
+            <input type="file" name="update" accept=".bin,.hex,.rom" required>
+          </fieldset>
+          <input type="submit" value="Upload">
+        </form>
+      </article>
+
+      <article>
+        <header>🛠 Programmer</header>
+         <p>Read ROM address:</p>
+        <fieldset role="group">
+          <input type="number" name="address" name="value" min="0" max="8191" placeholder="Address" aria-label="Number" ng-model="programmer.address" ng-disabled="!status.progmode">
+          <input type="button" value="Read" ng-disabled="!status.progmode" ng-click="readAddress()" />
+          <input type="button" value="Read next" ng-disabled="!status.progmode" ng-click="readNextAddress()" />
+        </fieldset>
+        <button ng-disabled="!status.state" ng-click="setProgrammerMode(!status.progmode)">{{status.progmode ? "Disable" : "Enable"}} programmation</button>
+        <button ng-disabled="!status.progmode" ng-click="eraseFlash()">Erase flash</button>
+      </article>
+
+      <article>
+        <header>📊 S-Link info</header>
+        <table>
+          <tbody>
+            <tr>
+              <td>Local time</td>
+              <td>{{sysinfo.time | toDate}}</td>
+            </tr>
+            <tr>
+              <td>Model</td>
+              <td>{{sysinfo.model}}</td>
+            </tr>
+            <tr>
+              <td>Heap memory</td>
+              <td>{{sysinfo.heap.free}} / {{sysinfo.heap.total}} bytes<br/><progress value="{{sysinfo.heap.total - sysinfo.heap.free}}" max="{{sysinfo.heap.total}}"></progress></td>
+            </tr>
+            <tr>
+              <td>Flash memory</td>
+              <td>{{sysinfo.SPIFFS.free}} / {{sysinfo.SPIFFS.total}} bytes<br/><progress value="{{sysinfo.SPIFFS.used}}" max="{{sysinfo.SPIFFS.total}}"></progress></td>
+            </tr>
+            <tr>
+              <td>WiFi</td>
+              <td>{{sysinfo.network.SSID}} ({{sysinfo.network.RSSI}} dBm)</td>
+            </tr>
+            <tr>
+              <td>Local IP</td>
+              <td>{{sysinfo.network.localIP}}</td>
+            </tr>
+          </tbody>
+        </table>        
+      </article>
+
+      <dialog scope-binding="dialogBox">
+        <article>
+          <h2>{{dialog.title}}</h2>
+          {{dialog.text}}
+          <footer>
+            <button ng-show="dialog.cancel" ng-click="dialog.cancel()" class="secondary">
+              Cancel
+            </button>
+            <button ng-show="dialog.confirm" ng-click="dialog.confirm()">Confirm</button>
+            <button ng-show="dialog.ok" ng-click="dialog.ok()">OK</button>
+          </footer>
+        </article>
+      </dialog>
+
+    </main>
+
+    <footer class="container">
+      <small>
+        S-Link • The S-CPU companion by 
+        <a href="https://sebastien.warin.fr">sebastien.warin.fr</a>
+      </small>
+    </footer>
+
+    <script>
+      const rootUri = "/"; //"http://slink.local/";
+
+      var app = angular.module('slink', []);
+      app.filter('toDate', function() {
+          return function(input) {
+              var dt = new Date(input * 1000);
+              return `${dt.toLocaleDateString()} ${dt.toLocaleTimeString()}`;
+          }
+      });
+      app.directive('focusMe', ['$timeout', function($timeout) {
+        return {
+          scope: { trigger: '=focusMe' },
+          link: function(scope, element) {
+            scope.$watch('trigger', function(value) {
+              if (value === true) {
+                $timeout(() => {
+                  element[0].focus();
+                  element[0].select();
+                });
+              }
+            });
+          }
+        };
+      }]);
+      app.directive('scopeBinding', function () {
+        return {
+          link: function ($scope, element, attr) {
+            $scope[attr.scopeBinding] = element[0];
+          }
+        }
+      });
+      app.controller('MainController', function($scope, $http, $interval) {
+
+        $scope.clock_sources = [
+          {'value': 0, 'label': 'NE555'},
+          {'value': 1, 'label': 'S-Link'}
+        ];
+        $scope.clock_frequencies = [
+          {'value': 5, 'label': '5 Hz'},
+          {'value': 10, 'label': '10 Hz'},
+          {'value': 100, 'label': '100 Hz'},
+          {'value': 1000, 'label': '1 kHz'},
+          {'value': 10000, 'label': '10 kHz'},
+          {'value': 100000, 'label': '100 kHz'},
+          {'value': 1000000, 'label': '1 MHz'},
+          {'value': 2000000, 'label': '2 MHz'},
+          {'value': 3000000, 'label': '3 MHz'},
+          {'value': 4000000, 'label': '4 MHz'},
+          {'value': 4500000, 'label': '4.5 MHz'},
+          {'value': 5000000, 'label': '5 MHz'}
+        ];
+
+        $scope.fetchROMS = function() {
+          $http.get(rootUri + 'roms')
+            .then(function(response) {
+              $scope.roms = response.data;
+            }, function(error) {
+              console.error('Fetch error:', error);
+            });
+        };
+        $scope.fetchStatus = function() {
+          $http.get(rootUri + 'status')
+            .then(function(response) {
+              $scope.status = response.data;
+            }, function(error) {
+              console.error('Fetch error:', error);
+            });
+        };
+        $scope.fetchSysinfo = function() {
+          $http.get(rootUri + 'sysinfo')
+            .then(function(response) {
+              $scope.sysinfo = response.data;
+            }, function(error) {
+              console.error('Fetch error:', error);
+            });
+        };
+
+        $scope.showError = function(text) { 
+          $scope.showModal ("Error", text);
+        }
+        $scope.showModal = function(title, text) {
+          $scope.dialog = {
+            title: title,
+            text: text,
+            ok: () => $scope.dialogBox.close()
+          };
+          $scope.dialogBox.showModal();
+        };
+
+        $scope.enableEdit = function(file) {
+          file.editing = true;
+          file.newName = file.path;
+        };
+        $scope.cancelEdit = function(file) {
+          file.editing = false;
+        };
+        $scope.handleRenameKey = function(event, file) {
+          if (event.key === 'Enter') {
+            $scope.renameFile(file);
+          } else if (event.key === 'Escape') {
+            $scope.cancelEdit(file);
+          }
+        };
+        $scope.renameFile = function(file) {
+          if (!file.newName || file.newName === file.path) {
+            file.editing = false;
+            return;
+          }
+          $http.get(`${rootUri}roms?file=${file.path}&newName=${file.newName}`)
+          .then(function(response) {
+            file.path = file.newName;
+            file.editing = false;
+          }).catch(function(error) {
+            console.error(error);
+            file.editing = false;
+            $scope.showError(error.data);
+          });
+        };
+
+        $scope.deleteRom = function(file) {
+          $scope.dialog = {
+            title: "Delete",
+            text: `Are-you sure to delete the ROM ${file.path} ?`,
+            cancel: () => $scope.dialogBox.close(),
+            confirm: () => {
+              $http.get(`${rootUri}roms?file=${file.path}&delete=true`)
+                .then(function(response) {
+                  $scope.fetchROMS();
+                }, function(error) {
+                  console.error('Fetch error:', error);
+                });
+              $scope.dialogBox.close();
+            }
+          };
+          $scope.dialogBox.showModal();
+        };
+        $scope.flashRom = function(file) {
+          $http.get(`${rootUri}roms?file=${file.path}&flash=true`)
+            .then(function(response) { }, function(error) {
+              console.error('Fetch error:', error);
+              $scope.showError(error.data);
+            });
+        };
+
+        $scope.setPowerState = function(state) {
+          $scope.dialog = {
+            title: "S-CPU",
+            text: `Are-you sure to power ${state ? "ON" : "OFF"} the S-CPU ?`,
+            cancel: () => $scope.dialogBox.close(),
+            confirm: () => {
+              $http.get(`${rootUri}control/power?state=${state}`)
+                .then(function(response) { }, function(error) {
+                  console.error('Fetch error:', error);
+                  $scope.showError(error.data);
+                });
+              $scope.dialogBox.close();
+            }
+          };
+          $scope.dialogBox.showModal();
+        };
+
+        $scope.setProgrammerMode = function(state) {
+          $http.get(`${rootUri}programmation/state?state=${state}`)
+            .then(function(response) { }, function(error) {
+              console.error('Fetch error:', error);
+              $scope.showError(error.data);
+            });
+        };
+
+        $scope.programmer = { };
+        $scope.readNextAddress = function() {
+          console.log($scope.programmer);
+          if(isNaN($scope.programmer.address)) {
+            $scope.programmer.address = 0;
+          }
+          $scope.programmer.address++;
+          $scope.readAddress();
+        };
+        $scope.readAddress = function() {
+          if(isNaN($scope.programmer.address)) {
+            $scope.programmer.address = 0;
+          }
+          $http.get(`${rootUri}programmation/read?address=${$scope.programmer.address}&state=true`)
+            .then(function(response) {
+              console.log("The ROM is outputting data from the specified address (OE = true). Exit programming mode to stop this operation.");
+             }, function(error) {
+              console.error('Fetch error:', error);
+              $scope.showError(error.data);
+            });
+        };
+
+        $scope.eraseFlash = function() {
+          $scope.dialog = {
+            title: "Erase Flash",
+            text: `Are-you sure to erase the flash ?`,
+            cancel: () => $scope.dialogBox.close(),
+            confirm: () => {
+              $http.get(`${rootUri}programmation/erase`)
+                .then(function(response) { }, function(error) {
+                  console.error('Fetch error:', error);
+                  $scope.showError(error.data);
+                });
+              $scope.dialogBox.close();
+            }
+          };
+          $scope.dialogBox.showModal();
+        };  
+
+        $scope.resetScpu = function() {         
+          $http.get(`${rootUri}control/reset`)
+            .then(function(response) { }, function(error) {
+              console.error('Fetch error:', error);
+              $scope.showError(error.data);
+            });
+        };
+
+        $scope.setClock = function(mode) {
+          switch(mode) {
+            case "start":
+              $scope.updateClock(true);
+              return;
+            case "pause":
+              $scope.updateClock(false);
+              return;
+            case "full":
+            case "half":
+            $http.get(`${rootUri}control/tick?full=${mode == 'full'}`)
+              .then(function(response) { }, function(error) {
+                console.error('Fetch error:', error);
+                $scope.showError(error.data);
+              });
+              return;
+          }
+        };
+        
+        $scope.updateClock = function(autoTick = undefined) {
+          $http.get(`${rootUri}control/clock?source=${$scope.status.clock.source}&frequency=${$scope.status.clock.frequency}&auto=${autoTick != undefined ? autoTick : $scope.status.clock.auto}`)
+            .then(function(response) { }, function(error) {
+              console.error('Fetch error:', error);
+              $scope.showError(error.data);
+            });
+        };
+
+        $scope.initUI = function() {
+          $scope.fetchROMS();
+          $scope.fetchStatus();
+          $scope.fetchSysinfo();
+        };
+
+        $interval(function () {
+            $scope.fetchSysinfo();
+            if($scope.sse.readyState == EventSource.CLOSED) {
+              initSSE();
+            }
+        }, 5000);
+        
+        // SSE
+        var initSSE = function() {   
+          if (!!window.EventSource) {            
+            console.log("Initializing Events ...");
+            var source = new EventSource(rootUri + 'events');
+            source.addEventListener("open", function (e) {
+                console.log("Events Connected");
+                $scope.initUI();
+              }, false);
+            source.addEventListener("error", function (e) {
+                if (e.target.readyState != EventSource.OPEN) {
+                  console.log("Events Disconnected");
+                }
+              }, false);
+            source.addEventListener("Notify", function (e) {
+                $scope.$apply(function () {
+                  $scope.showModal ("S-Link", e.data);
+                });
+              }, false);
+            source.addEventListener("RomsUpdated", function (e) {
+                $scope.$apply(function () {
+                  $scope.fetchROMS();
+                });
+              }, false);
+            source.addEventListener("StateUpdated", function (e) {
+                $scope.$apply(function () {
+                  $scope.fetchStatus();
+                });
+              }, false);
+            source.addEventListener("JobReport", function (e) {
+                $scope.$apply(function () {
+                  const report = JSON.parse(e.data);
+                  const jobFinish = $scope.status.job && $scope.status.job.active == true && report.active == false;
+                  $scope.status.job = report;
+                  if(jobFinish) {
+                    $scope.showModal("Flash ROM", "Your ROM has been flashed successfully!");
+                    $scope.fetchStatus();
+                  }
+                });
+              }, false);
+              $scope.sse = source;
+          }
+        };
+        initSSE();
+      });
+
+    </script>
+  </body>
+</html>

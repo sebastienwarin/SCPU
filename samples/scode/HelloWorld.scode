@@ -1,0 +1,53 @@
+// =============================================================================
+// S-CODE SAMPLE - HELLO WORLD
+// =============================================================================
+// What it does:
+//   Sends a constant string to the TTY through the shared Print library.
+// Expected result:
+//   The terminal displays "Hello, World!" followed by a new line.
+// Runs on:
+//   Desktop/CLI simulators and S-CPU targets exposing the device-1 TTY.
+// Demonstrates:
+//   Includes, constants, strings, functions, and library-based output.
+// =============================================================================
+
+#include "core/Print"
+
+// LCD2004 display (Hitachi HD44780 controller) for S-CPU TTL
+//#include "drivers/HD44780"
+//lcd_begin();
+
+// The device-1 TTY driver works in the software, Digital, and Logisim simulators.
+#include "drivers/TTY"
+
+const string message = "Hello, World!\n";
+
+void main()
+{
+  // Print a string using the core/Print library
+  Print(message);
+
+  /*
+   * Equivalent forms in S-Code:
+   *
+   *   // Using a pointer
+   *   char* ptr = message;
+   *   while (*ptr != '\0') {
+   *     PrintChar(*ptr);
+   *     ptr++;
+   *   }
+   *
+   *   // Using a for loop and index
+   *   for (int i = 0; i < strlen(message); i++) {
+   *     PrintChar(message[i]);
+   *   }
+   *
+   *   // Using a while loop and index
+   *   int i = 0;
+   *   while (message[i] != '\0') {
+   *     PrintChar(message[i++]);
+   *   }
+   */
+}
+
+main();

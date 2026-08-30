@@ -1,0 +1,46 @@
+// =============================================================================
+// S-CODE SAMPLE - FIBONACCI
+// =============================================================================
+// What it does:
+//   Computes and stores the first 12 Fibonacci values with an iterative function.
+// Expected result:
+//   The terminal prints lines from "0 = 0" through "11 = 89".
+// Runs on:
+//   Desktop/CLI simulators and S-CPU targets exposing the device-1 TTY. At
+//   1 kHz, the S-Code version takes about 18 seconds.
+// Demonstrates:
+//   Functions, arrays, loops, conditionals, and numeric output.
+// =============================================================================
+
+#include "core/Print"
+#include "drivers/TTY"
+
+const int count = 12;
+// Array sizes currently require an integer literal, so this cannot yet be
+// written as results[count].
+int results[12];
+
+for (int i = 0; i < count; i++) {
+  int result = fibonacci(i);
+  results[i] = result;
+
+  PrintNumber(i);
+  Print(" = ");
+  PrintNumber(result);
+  if (i < count - 1) PrintChar('\n');
+}
+
+int fibonacci(int n) {
+  if (n <= 1) {
+    return n;
+  }
+  int curr = 1;
+  int prev1 = 1;
+  int prev2 = 0;
+  for (int i = 2; i <= n; i++) {
+    curr = prev1 + prev2;
+    prev2 = prev1;
+    prev1 = curr;
+  }
+  return curr;
+}

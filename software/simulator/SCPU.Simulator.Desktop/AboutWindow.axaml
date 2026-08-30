@@ -1,0 +1,42 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SCPU.Simulator.Desktop.AboutWindow"
+        Title="About S-CPU Simulator"
+        Icon="/Assets/favicon.ico"
+        Width="540" Height="470"
+        CanResize="False"
+        ShowInTaskbar="False"
+        SystemDecorations="BorderOnly"
+        KeyDown="OnKeyDown"
+        WindowStartupLocation="CenterOwner">
+  <Border Classes="toolPanel" Margin="20" Padding="28">
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="18">
+      <Grid x:Name="DragArea" ColumnDefinitions="*,Auto" PointerPressed="OnDragAreaPointerPressed">
+        <StackPanel Spacing="5">
+          <TextBlock Classes="panelTitle" FontSize="25" Text="S-CPU Simulator"/>
+          <TextBlock x:Name="VersionLabel" Classes="mono" Opacity="0.6"/>
+        </StackPanel>
+        <Button Grid.Column="1" Classes="modalCloseButton" Width="30" Height="30"
+                VerticalAlignment="Top" Click="OnClose" ToolTip.Tip="Close" Content="&#x2715;"/>
+      </Grid>
+      <Border Grid.Row="1" Height="1" Background="{StaticResource ScpuBorder}"/>
+      <TextBlock Grid.Row="2" MaxWidth="430" HorizontalAlignment="Left" TextWrapping="Wrap"
+                 Text="A desktop simulator and debugger for the educational 16-bit S-CPU, built with C#, .NET and Avalonia."/>
+      <Border Grid.Row="3" Background="{StaticResource ScpuRaised}" CornerRadius="3" Padding="18,18,18,24">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
+          <TextBlock Classes="panelTitle" Text="LEARN MORE"/>
+          <Grid Grid.Row="1" ColumnDefinitions="130,*">
+            <TextBlock Opacity="0.7" Text="Project website"/>
+            <Button Grid.Column="1" Classes="linkButton" Click="OnOpenBuildACPU" Content="BuildACPU.com  ↗"/>
+          </Grid>
+          <TextBlock Grid.Row="2" Margin="0,4,0,0" Classes="panelTitle" Text="PROJECT AUTHOR"/>
+          <Grid Grid.Row="3" ColumnDefinitions="130,*">
+            <TextBlock Opacity="0.7" Text="Created by"/>
+            <Button Grid.Column="1" Classes="linkButton" Click="OnOpenAuthorWebsite" Content="Sébastien Warin  ↗"/>
+          </Grid>
+        </Grid>
+      </Border>
+      <Button Grid.Row="4" Classes="primaryAction" MinWidth="88" HorizontalAlignment="Right" IsDefault="True" Click="OnClose" Content="Close"/>
+    </Grid>
+  </Border>
+</Window>

@@ -1,0 +1,5 @@
+<Project>
+  <ItemGroup Condition="('$(OutputType)' == 'Exe' or '$(OutputType)' == 'WinExe') and ('$(MSBuildProjectName)' == 'SCPU.Simulator.CLI' or '$(MSBuildProjectName)' == 'SCPU.Simulator.Desktop')">
+    <Compile Include="$(MSBuildThisFileDirectory)common\BuildInfo.cs" Link="BuildInfo.cs" />
+  </ItemGroup>
+</Project>

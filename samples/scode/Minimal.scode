@@ -1,0 +1,23 @@
+// =============================================================================
+// S-CODE SAMPLE - MINIMAL PROGRAM
+// =============================================================================
+// What it does:
+//   Calls a multiplication function and stores 6 x 7 in a global variable.
+// Expected result:
+//   The program halts with `answer = 42` in RAM and 42 in the accumulator.
+// Runs on:
+//   Desktop/CLI simulators and all S-CPU hardware implementations.
+// Demonstrates:
+//   A function, parameters, arithmetic, a global variable, and top-level return.
+// =============================================================================
+
+// Parameters are local to the function; `return` sends the result to its caller.
+int Multiply(int left, int right) {
+  return left * right;
+}
+
+// Top-level statements form the program body. Global variables live in RAM.
+int answer = Multiply(6, 7);
+
+// A top-level return leaves its value in the accumulator, then halts the program.
+return answer;

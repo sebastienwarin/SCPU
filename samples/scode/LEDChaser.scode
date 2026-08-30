@@ -1,0 +1,33 @@
+// =============================================================================
+// S-CODE SAMPLE - LED CHASER (K2000 EFFECT)
+// =============================================================================
+// What it does:
+//   Recreates the K2000 scanner effect on the device-0 LED bank.
+// Expected result:
+//   The lit LED moves from one side to the other and back every 100 ms.
+// Runs on:
+//   Desktop/CLI simulators and targets exposing the device-0 LED bank. Set
+//   FREQ_HZ to the actual target clock for accurate timing.
+// Demonstrates:
+//   Constant arrays, indexing, an infinite loop, MMIO output, and delay.
+// =============================================================================
+
+#include "core/Delay"
+#include "io/DigitalWrite"
+
+// DigitalWrite adds the IODEV base internally, so this is an MMIO offset.
+#const int LED_BANK = 0x002; // device 0, register 2: LED bank
+#const int DELAY_MS = 100;   // delay per step (smaller = faster)
+
+// LED pattern: 4-bit sequence moving left/right
+const int ledPattern[] = { 8, 4, 2, 1, 2, 4 };
+
+int ledIndex = 0;
+while (true) {
+    DigitalWrite(LED_BANK, ledPattern[ledIndex++]);
+    
+    // wrap to the beginning of the pattern
+    if(ledIndex >= sizeof(ledPattern)) ledIndex = 0;
+    
+    delay(DELAY_MS);
+}

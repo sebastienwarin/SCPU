@@ -1,0 +1,10 @@
+# --- Gowin vendor generated files ---
+impl/temp
+impl/gwsynthesis
+impl/pnr
+
+*.fsdb
+*.gwsprj.user
+*.gwsprj.backup
+*.log
+*.bak

@@ -1,0 +1,11 @@
+int DigitalRead(int address) {
+  int result = 0;
+  asm("
+    LDS #4          ; LDS #4 = relative address
+    ADD #(IODEV)    ; A = IODEV + offset
+    STA R0          ; R0 = absolute address
+    LDA @(R0)       ; Read value *(IODEV+offset) 
+    STS #1          ; store to 'result' variable
+  ");
+  return result;
+}

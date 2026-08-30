@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <!-- Shared product version for every project in the software toolchain. -->
+    <VersionPrefix>0.10.0</VersionPrefix>
+    <VersionSuffix>dev</VersionSuffix>
+
+    <!-- Assembly and file versions must remain numeric. -->
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <FileVersion>0.1.0.0</FileVersion>
+
+    <Product>S-CPU Toolchain</Product>
+    <Authors>Sébastien Warin</Authors>
+    <Company>BuildACPU.com</Company>
+    <PackageProjectUrl>https://buildacpu.com</PackageProjectUrl>
+  </PropertyGroup>
+</Project>

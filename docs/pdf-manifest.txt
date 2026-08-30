@@ -1,0 +1,30 @@
+readme.md
+docs/architecture.md
+
+# Hardware
+hardware/README.md
+hardware/logisim/README.md
+hardware/digital/README.md
+hardware/verilog/README.md
+hardware/gowin/README.md
+hardware/scpu-ttl/README.md
+
+# Physical companion
+firmware/slink/README.md
+
+# Software toolchain
+software/README.md
+software/assembler/README.md
+software/compiler/README.md
+
+# Simulator frontends
+software/simulator/SCPU.Simulator.Desktop/README.md
+software/simulator/SCPU.Simulator.CLI/README.md
+
+# Simulator internals
+software/simulator/SCPU.Simulator.Core/README.md
+software/simulator/SCPU.Simulator.Debugger/README.md
+software/simulator/SCPU.Simulator.Devices/README.md
+
+# Examples
+samples/README.md

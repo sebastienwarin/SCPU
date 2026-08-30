@@ -1,0 +1,154 @@
+// =============================================================================
+// S-CODE SAMPLE - HARDWARE SHOWCASE
+// =============================================================================
+// What it does:
+//   Runs a small exhibition display with a clock, BuildACPU info page,
+//   light readings, button navigation, and a continuous LED animation.
+// Expected result:
+//   Buttons 1 and 4 cycle between clock, BuildACPU, and light-sensor LCD pages;
+//   button 6 toggles the LED animation.
+// Runs on:
+//   S-CPU TTL with LCD2004, input board, LEDs, DS3231, and TSL2561.
+// Real hardware required:
+//   Yes. The complete peripheral setup is not emulated by the simulators.
+// Demonstrates:
+//   A multi-device event application and cooperative periodic updates.
+// =============================================================================
+#include "core/Delay"
+#include "core/Print"
+#include "io/Buttons"
+#include "io/DigitalWrite"
+
+#include "drivers/HD44780"
+#include "drivers/DS3231"
+#include "drivers/TSL2561"
+
+// I/O helpers add IODEV internally, so these values are MMIO offsets.
+#const int INPUT_BOARD = 0x301;  // device 3, register 1
+#const int LED_BANK = 0x002;     // device 0, register 2
+
+// Button masks (active-low, debounced by io/Buttons).
+#const int BTN_PREVIOUS   = 1 << 2; // physical button 1
+#const int BTN_NEXT       = 1 << 5; // physical button 4
+#const int BTN_TOGGLE_LED = 1 << 7; // physical button 6
+
+// LED pattern (Knight Rider)
+const int ledPattern[] = { 8, 4, 2, 1, 2, 4 };
+
+// Screens
+#const int SCREEN_COUNT = 3;
+int screenIndex = 0;
+
+// State
+int  ledIndex = 0;
+bool ledBlink = true;
+
+void PrintTwoDigits(int value) {
+  if (value < 10) PrintChar('0');
+  PrintDigits(value);
+}
+
+void PrintPaddedAt(int x, int y, string text) {
+  lcd_setCursor(x, y);
+  Print("                    ");
+  lcd_setCursor(x, y);
+  Print(text);
+}
+
+// Render current screen
+void drawScreen(bool redrawAll) {
+  if(redrawAll) {
+    lcd_clear();
+    // Line 0: project welcome
+    lcd_setCursor(4,0);
+    Print("Hello S-CPU!");
+  }
+
+  switch(screenIndex) {
+    case 0:
+      // Update RTC clock
+      rtc_update();
+
+      // Line 2: HH:MM:SS
+      lcd_setCursor(6, 2);
+      PrintTwoDigits(rtc_hour); PrintChar(':');
+      PrintTwoDigits(rtc_min);  PrintChar(':');
+      PrintTwoDigits(rtc_sec);
+
+      // Line 3: DD/MM/20YY
+      lcd_setCursor(5, 3);
+      PrintTwoDigits(rtc_day); PrintChar('/');
+      PrintTwoDigits(rtc_mon); PrintChar('/');
+      Print("20"); PrintTwoDigits(rtc_year);
+
+      break;
+
+    case 1:
+      // BuildACPU information page
+      PrintPaddedAt(0, 1, "BuildACPU.com");
+      PrintPaddedAt(0, 2, "S-CPU Hardware Demo");
+      PrintPaddedAt(0, 3, "BTN6: LED on/off");
+
+      break;
+
+    case 2:
+      // Light sensor
+      tsl_update();           // refresh internal CH0/CH1
+      int lux = tsl_lux();    // integer lux (0 if unsupported settings)
+
+      // Keep each metric on its own line to avoid LCD line wrap.
+      PrintPaddedAt(0, 1, "LUX:");
+      lcd_setCursor(5, 1);
+      PrintNumber(lux);
+
+      PrintPaddedAt(0, 2, "CH0:");
+      lcd_setCursor(5, 2);
+      PrintNumber(tsl_ch0);
+
+      PrintPaddedAt(0, 3, "CH1:");
+      lcd_setCursor(5, 3);
+      PrintNumber(tsl_ch1);
+
+      break;
+  }
+}
+
+// --- Init ---
+lcd_begin();
+btn_init();
+rtc_begin(RTC_DS3231_ADDR);
+tsl_begin(TSL2561_ADDR_FLOAT);
+tsl_setSettings(TSL2561_INTEGRATIONTIME_402MS, TSL2561_GAIN_16X);
+//bme_begin(BME280_ADDR_SDO_LOW);
+drawScreen(true);
+
+// --- Main loop ---
+int tick = 0;
+while (true) {
+
+  // One-shot button events
+  int edges = btn_getPressedEdges(INPUT_BOARD);
+  if ((edges & BTN_PREVIOUS) != 0) {
+    screenIndex = (screenIndex == 0) ? (SCREEN_COUNT - 1) : (screenIndex - 1);
+  }
+  else if ((edges & BTN_NEXT) != 0) {
+    screenIndex = (screenIndex + 1) % SCREEN_COUNT;
+  }
+  else if ((edges & BTN_TOGGLE_LED) != 0) {
+    ledBlink = !ledBlink;
+  }
+
+  // Refresh every 100ms or on user input
+  if (++tick >= 10 || edges != 0) {
+    tick = 0;
+
+    // LEDs
+    DigitalWrite(LED_BANK, ledBlink ? ledPattern[ledIndex++] : 0);
+    if (ledIndex >= sizeof(ledPattern)) ledIndex = 0;
+
+    // Screen
+    drawScreen(edges != 0);
+  }
+
+  delay(10); // ~10 ms tick
+}

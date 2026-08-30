@@ -1,0 +1,70 @@
+// =============================================================================
+// S-CODE SAMPLE - OLED CLOCK
+// =============================================================================
+// What it does:
+//   Reads a DS3231 and renders the current date and time on an SSD1306 OLED.
+// Expected result:
+//   The OLED shows a title, a large HH:MM clock, and a YYYY-MM-DD date.
+// Runs on:
+//   S-CPU TTL with the I2C DS3231 and 128x64 SSD1306 OLED.
+// Real hardware required:
+//   Yes. The I2C devices are not emulated by the software simulators.
+// Demonstrates:
+//   RTC access, character rendering, layout, and selective OLED updates.
+// =============================================================================
+#include "core/Delay"
+#include "drivers/SSD1306_Font"
+#include "drivers/DS3231"
+
+void main() {
+
+  // Init 128x64 @ 0x3C
+  oled_begin(OLED_ADDR_0x3C, 128, 64);
+  oled_clear();
+  
+  // Display Hello SCPU
+  //oled_print_big(5, 35, "HELLO");
+  //oled_print_big(1, 40, "SCPU");
+
+  // Init RTC
+  rtc_begin(RTC_DS3231_ADDR);
+
+  // Header
+  oled_print(7, 10, "SCPU DEMO BY SEBASTIEN WARIN");
+  
+  // Main loop
+  while (true) {
+
+    // Update time
+    rtc_update();
+
+    // Display Time
+    int timeColumn = 28;
+    int h1 = rtc_hour / 10; int h2 = rtc_hour % 10;
+    int m1 = rtc_min / 10; int m2 = rtc_min % 10;
+
+    oled_fill_rect(4, 5, 0, 127, 0x00);
+    oled_draw_char_big(4, timeColumn, '0' + h1); timeColumn += 12;
+    oled_draw_char_big(4, timeColumn, '0' + h2); timeColumn += 12;
+    oled_draw_char_big(4, timeColumn, ':');      timeColumn += 12;
+    oled_draw_char_big(4, timeColumn, '0' + m1); timeColumn += 12;
+    oled_draw_char_big(4, timeColumn, '0' + m2);
+
+    // Display Date
+    int dateColumn = 26;
+    oled_fill_rect(2, 2, 0, 127, 0x00);
+    oled_print(2, dateColumn, "20");
+    oled_draw_char5x7(2, dateColumn+12, '0' + rtc_year / 10);
+    oled_draw_char5x7(2, dateColumn+18, '0' + rtc_year % 10);
+    oled_draw_char5x7(2, dateColumn+24, '-');
+    oled_draw_char5x7(2, dateColumn+30, '0' + rtc_mon / 10);
+    oled_draw_char5x7(2, dateColumn+36, '0' + rtc_mon % 10);
+    oled_draw_char5x7(2, dateColumn+42, '-');
+    oled_draw_char5x7(2, dateColumn+48, '0' + rtc_day / 10);
+    oled_draw_char5x7(2, dateColumn+54, '0' + rtc_day % 10);
+
+    delay(500);
+  }
+}
+
+main();

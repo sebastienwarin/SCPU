@@ -1,0 +1,48 @@
+name: Build documentation PDF
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "**/*.md"
+      - "docs/**"
+      - ".gitea/workflows/documentation.yml"
+  workflow_dispatch:
+
+jobs:
+  documentation:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install PDF tools
+        run: |
+          if command -v sudo >/dev/null 2>&1; then
+            APT="sudo apt-get"
+          else
+            APT="apt-get"
+          fi
+
+          $APT update
+          $APT install -y \
+            pandoc \
+            weasyprint \
+            fonts-dejavu \
+            fonts-liberation \
+            fonts-noto-color-emoji
+
+      - name: Build documentation PDF
+        shell: bash
+        run: |
+          chmod +x docs/build-pdf.sh
+          docs/build-pdf.sh
+
+      - name: Verify generated PDF
+        run: |
+          test -s "artifacts/documentation/S-CPU-Documentation.pdf"

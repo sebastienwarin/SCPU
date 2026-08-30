@@ -1,0 +1,173 @@
+#include "drivers/SSD1306"
+
+// ---------- 5x7 Font (subset) ----------
+// Each char = 5 columns; LSB = top pixel. One blank column after each char.
+// NOTE: arrays are static inside the function to allocate in heap (not stack).
+int font5x7_get_col(char ch, int idx) {
+  // digits
+  if (ch >= '0' && ch <= '9') {
+    const int DIGITS[10,5] = {
+      {0x3E,0x45,0x49,0x51,0x3E}, // 0
+      {0x00,0x21,0x7F,0x01,0x00}, // 1
+      {0x23,0x45,0x49,0x51,0x21}, // 2
+      {0x42,0x41,0x51,0x69,0x46}, // 3
+      {0x0C,0x14,0x24,0x7F,0x04}, // 4
+      {0x72,0x51,0x51,0x51,0x4E}, // 5
+      {0x1E,0x29,0x49,0x49,0x06}, // 6
+      {0x40,0x47,0x48,0x50,0x60}, // 7
+      {0x36,0x49,0x49,0x49,0x36}, // 8
+      {0x30,0x49,0x49,0x4A,0x3C}  // 9
+    };
+    return DIGITS[ch - '0', idx];
+  }
+
+  // uppercase A..Z
+  if (ch >= 'A' && ch <= 'Z') {
+    const int U[26,5] = {
+      {0x7E,0x11,0x11,0x11,0x7E}, // A
+      {0x7F,0x49,0x49,0x49,0x36}, // B
+      {0x3E,0x41,0x41,0x41,0x22}, // C
+      {0x7F,0x41,0x41,0x22,0x1C}, // D
+      {0x7F,0x49,0x49,0x49,0x41}, // E
+      {0x7F,0x48,0x48,0x48,0x40}, // F
+      {0x3E,0x41,0x49,0x49,0x2E}, // G
+      {0x7F,0x08,0x08,0x08,0x7F}, // H
+      {0x00,0x41,0x7F,0x41,0x00}, // I
+      {0x02,0x01,0x41,0x7E,0x40}, // J
+      {0x7F,0x08,0x14,0x22,0x41}, // K
+      {0x7F,0x01,0x01,0x01,0x01}, // L
+      {0x7F,0x20,0x10,0x20,0x7F}, // M
+      {0x7F,0x10,0x08,0x04,0x7F}, // N
+      {0x3E,0x41,0x41,0x41,0x3E}, // O
+      {0x7F,0x48,0x48,0x48,0x30}, // P
+      {0x3E,0x41,0x45,0x43,0x3D}, // Q
+      {0x7F,0x48,0x4C,0x4A,0x31}, // R
+      {0x32,0x49,0x49,0x49,0x26}, // S
+      {0x40,0x40,0x7F,0x40,0x40}, // T
+      {0x7E,0x01,0x01,0x01,0x7E}, // U
+      {0x7C,0x02,0x01,0x02,0x7C}, // V
+      {0x7E,0x01,0x1E,0x01,0x7E}, // W
+      {0x63,0x14,0x08,0x14,0x63}, // X
+      {0x70,0x08,0x07,0x08,0x70}, // Y
+      {0x43,0x45,0x49,0x51,0x61}  // Z
+    };
+    return U[ch - 'A', idx];
+  }
+
+  // misc glyphs (as small static arrays)
+  if (ch == ' ') return 0x00;
+
+  if (ch == '-') {
+    const int DASH[1,5] = { {0x08,0x08,0x08,0x08,0x08} };
+    return DASH[0, idx];
+  }
+
+  if (ch == ':') {
+    const int COLON[1,5] = { {0x00,0x36,0x36,0x00,0x00} };
+    return COLON[0, idx];
+  }
+
+  return 0x00; // fallback blank
+}
+
+void oled_draw_char5x7(int page, int col, char ch) {
+  int i;
+  oled_set_pos(page, col);
+  for (i = 0; i < 5; i++) { 
+    oled_data(font5x7_get_col(ch, i));
+  }
+  oled_data(0x00); // spacing
+}
+
+void oled_print(int page, int col, string text) {
+  char c;
+  char* pointer = text;
+  while (true) {
+    char c = *pointer;
+    if (c == '\0') break;
+    oled_draw_char5x7(page, col, c);
+    col += 6;
+    if (col >= oled_w) break;
+    ++pointer;
+  }
+}
+
+// ===== 5x7 -> 10x14 scaler (page-aligned, no framebuffer) =====
+// Draw a bigger char (2x scale) using two pages (page and page+1).
+// Each original column becomes 2 columns; rows doubled (7 -> 14).
+void oled_draw_char_big(int page, int col, char ch) {
+  int i;
+
+  // --- TOP byte row (rows 0..7) ---
+  oled_set_pos(page, col);
+  for (i = 0; i < 5; i++) {
+    int c = font5x7_get_col(ch, i) & 0x7F;  // 7 bits used
+
+    // Extract bits with masks (no right shift)
+    int b0 = (c & 0x01) ? 1 : 0;
+    int b1 = (c & 0x02) ? 1 : 0;
+    int b2 = (c & 0x04) ? 1 : 0;
+    int b3 = (c & 0x08) ? 1 : 0;
+    int b4 = (c & 0x10) ? 1 : 0;
+    int b5 = (c & 0x20) ? 1 : 0;
+    int b6 = (c & 0x40) ? 1 : 0;
+
+    // Build top byte: (b0,b0,b1,b1,b2,b2,b3,b3)
+    int top =
+        (b0)        |
+        (b0 << 1)   |
+        (b1 << 2)   |
+        (b1 << 3)   |
+        (b2 << 4)   |
+        (b2 << 5)   |
+        (b3 << 6)   |
+        (b3 << 7);
+
+    // Write twice (2x horizontal)
+    oled_data(top & 0xFF);
+    oled_data(top & 0xFF);
+  }
+
+  // --- BOTTOM byte row (rows 8..15) ---
+  oled_set_pos(page + 1, col);
+  for (i = 0; i < 5; i++) {
+    int c = font5x7_get_col(ch, i) & 0x7F;
+
+    int b4 = (c & 0x10) ? 1 : 0;
+    int b5 = (c & 0x20) ? 1 : 0;
+    int b6 = (c & 0x40) ? 1 : 0;
+
+    // Build bottom byte: (b4,b4,b5,b5,b6,b6,0,0)
+    int bot =
+        (b4)        |
+        (b4 << 1)   |
+        (b5 << 2)   |
+        (b5 << 3)   |
+        (b6 << 4)   |
+        (b6 << 5);
+
+    oled_data(bot & 0xFF);
+    oled_data(bot & 0xFF);
+  }
+}
+
+// Print string in 10x14. Fixed 2px tracking between glyphs to avoid “collé”.
+void oled_print_big(int page, int col, string text) {
+  char* p = text;
+  while (true) {
+    char ch = *p;
+    if (ch == '\0') break;
+
+    // Draw glyph (10 px wide)
+    oled_draw_char_big(page, col, ch);
+    col += 10;
+
+    // Add 2 blank columns (on both pages) as spacing
+    oled_set_pos(page, col);       oled_data(0x00); oled_data(0x00);
+    oled_set_pos(page + 1, col);   oled_data(0x00); oled_data(0x00);
+    col += 2;
+
+    if (col >= oled_w) break;
+    ++p;
+  }
+}

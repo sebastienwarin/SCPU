@@ -1,0 +1,31 @@
+// =============================================================================
+// S-CODE SAMPLE - LANGUAGE BASICS
+// =============================================================================
+// What it does:
+//   Evaluates literals, variables, constants, arithmetic, boolean, bitwise,
+//   comparison, cast, ternary, and sizeof expressions.
+// Expected result:
+//   The terminal prints: result = 42
+// Runs on:
+//   Desktop/CLI simulators and S-CPU targets with the TTY device.
+// Demonstrates:
+//   Primitive types, operators, constants, casts, ternary, and sizeof.
+// =============================================================================
+
+#include "core/Print"
+#include "drivers/TTY"
+
+const int FACTOR = 6;                 // named value that cannot be reassigned
+
+int result = FACTOR * 7;              // arithmetic expression
+bool correct = result == 42;          // comparison produces a boolean
+char marker = correct ? '*' : '!';    // ternary: choose one of two values
+int lowByte = ((int)result) & 0xFF;   // cast, then keep only the lowest 8 bits
+int intSize = sizeof(int);            // size of the type in S-CPU words
+
+Print("result = ");
+PrintNumber(lowByte);
+Print("\n");
+
+// The return value remains in the accumulator after the generated HALT.
+return result;

@@ -1,0 +1,26 @@
+-series GW5A
+-device GW5A-25
+-device_version A
+-package MBGA121N
+-part_number GW5A-LV25MG121NC1/I0
+
+
+-mod_name Gowin_DPB
+-file_name gowin_dpb
+-path C:/Users/Sebastien/source/repos/SCPU/hardware/gowin/src/gowin_dpb/
+-type RAM_DP
+-file_type vlg
+-bram_b true
+-dev_type GW5A-25A
+-depth_0 49152
+-depth_1 49152
+-width_0 16
+-width_1 16
+-read_mode_0 bypass
+-read_mode_1 bypass
+-write_mode_0 normal
+-write_mode_1 normal
+-speed false
+-reset_mode async
+-init_file C:\Users\Sebastien\source\repos\SCPU\hardware\gowin\src\gowin_dpb\rom.mi
+-init_match port_A

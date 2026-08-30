@@ -1,0 +1,13 @@
+int strlen(string str) {
+  char* pointer = str; int base = pointer;
+  while (*pointer != '\0') { ++pointer; }
+  return pointer - base;  
+}
+
+bool strcmp(string str, string str2) {
+  char* pointer = str; char* pointer2 = str2;
+  while (*pointer == *(pointer2++)) {
+    if(*(pointer++) == '\0') return true;
+  }
+  return false;
+}

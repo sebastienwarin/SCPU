@@ -1,0 +1,221 @@
+@page {
+    size: A4;
+    margin: 18mm 16mm 20mm 16mm;
+
+    @bottom-center {
+        content: element(pdf-footer);
+    }
+
+    @bottom-right {
+        content: counter(page);
+        font-size: 8pt;
+        color: #777;
+    }
+}
+
+html {
+    font-family: "DejaVu Sans", Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 1.5;
+    color: #24292f;
+}
+
+h1 {
+    font-size: 25pt;
+    border-bottom: 2px solid #d0d7de;
+    padding-bottom: 8px;
+}
+
+h2 {
+    font-size: 18pt;
+    border-bottom: 1px solid #d8dee4;
+    padding-bottom: 4px;
+    margin-top: 28px;
+}
+
+h3 {
+    font-size: 14pt;
+    margin-top: 22px;
+}
+
+h1,
+h2,
+h3,
+h4 {
+    break-after: avoid;
+}
+
+.emoji {
+    font-family: "Noto Color Emoji";
+    font-style: normal;
+    font-weight: normal;
+}
+
+p,
+li {
+    orphans: 3;
+    widows: 3;
+}
+
+pre,
+blockquote,
+table,
+img {
+    break-inside: avoid;
+}
+
+pre {
+    padding: 12px;
+    background: #f6f8fa;
+    border: 1px solid #d0d7de;
+    border-radius: 5px;
+    white-space: pre-wrap;
+    font-size: 8.5pt;
+}
+
+code {
+    font-family: "DejaVu Sans Mono", monospace;
+    background: #f6f8fa;
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+
+pre code {
+    padding: 0;
+    background: transparent;
+}
+
+/* Pandoc's syntax highlighter wraps every source line in an inline-block.
+   Combined with pre-wrap this can introduce a large hanging indent. Keep the
+   spans inline so only indentation present in the source remains visible. */
+pre > code.sourceCode {
+    white-space: pre-wrap;
+}
+
+pre > code.sourceCode > span {
+    display: inline;
+    line-height: inherit;
+    padding-left: 0;
+    text-indent: 0;
+}
+
+/* Skylighting marks syntax it does not know as an error. S-CPU assembly has
+   valid constructs such as @ptr and 1_000_000 that generic lexers reject. */
+code.sourceCode span.er {
+    color: inherit;
+    font-weight: inherit;
+    text-decoration: none;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+}
+
+th,
+td {
+    border: 1px solid #d0d7de;
+    padding: 6px 8px;
+    text-align: left;
+}
+
+th {
+    background: #f6f8fa;
+}
+
+img {
+    display: block;
+    max-width: 100%;
+    max-height: 175mm;
+    object-fit: contain;
+    margin: 12px auto;
+}
+
+/* The overview contains large screenshots surrounded by short command
+   examples. A slightly smaller size prevents an image becoming an orphan. */
+.pdf-overview img:not([alt="BuildACPU"]) {
+    max-width: 88%;
+    max-height: 145mm;
+}
+
+a {
+    color: #0969da;
+    text-decoration: none;
+}
+
+blockquote {
+    margin-left: 0;
+    padding-left: 12px;
+    border-left: 4px solid #d0d7de;
+    color: #57606a;
+}
+
+.pdf-overview > p:first-of-type {
+    margin: 12mm 0 10mm;
+    text-align: center;
+}
+
+.pdf-overview > p:first-of-type img[alt="BuildACPU"] {
+    display: inline-block;
+    width: 75mm !important;
+    height: 75mm !important;
+    max-width: none;
+    max-height: 75mm;
+    object-fit: contain;
+    margin: 0;
+}
+
+/* Pandoc emits one global table of contents. WeasyPrint resolves the page
+   number of every internal target while laying out the final document. */
+nav[role="doc-toc"] {
+    break-before: page;
+    break-after: page;
+}
+
+nav[role="doc-toc"] h2 {
+    font-size: 22pt;
+    border-bottom: 2px solid #d0d7de;
+    bookmark-level: none;
+}
+
+nav[role="doc-toc"] ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+nav[role="doc-toc"] li {
+    display: block;
+}
+
+nav[role="doc-toc"] .toc-level-2 {
+    padding-left: 6mm;
+}
+
+nav[role="doc-toc"] .toc-level-3 {
+    padding-left: 12mm;
+}
+
+nav[role="doc-toc"] a {
+    display: block;
+    color: inherit;
+    width: 100%;
+}
+
+nav[role="doc-toc"] a::after {
+    content: leader(".") target-counter(attr(href), page);
+}
+
+.pdf-chapter > h1 {
+    break-before: page;
+}
+
+.pdf-footer {
+    position: running(pdf-footer);
+    color: #777;
+    font-size: 8pt;
+}
+
+.pdf-footer a {
+    color: #777;
+}

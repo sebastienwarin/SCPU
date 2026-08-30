@@ -1,0 +1,58 @@
+// =============================================================================
+// S-CODE SAMPLE - SIEVE OF ERATOSTHENES
+// =============================================================================
+// What it does:
+//   Finds every prime number up to 100 with a boolean sieve.
+// Expected result:
+//   The terminal lists the prime numbers from 2 through 97.
+// Runs on:
+//   Desktop/CLI simulators and S-CPU targets exposing the device-1 TTY.
+// Demonstrates:
+//   Boolean arrays, functions, nested loops, and an efficient algorithm.
+// =============================================================================
+
+#include "core/Print"
+#include "drivers/TTY"
+
+// Keep the sample short enough to complete in the simulator default run mode.
+const int upperLimit = 100;
+
+// The sieve stores one flag per value from 0 through upperLimit.
+bool isPrime[101];
+
+void InitializeSieve() {
+    for (int value = 0; value <= upperLimit; value++) {
+        isPrime[value] = false;
+    }
+
+    for (int candidate = 2; candidate <= upperLimit; candidate++) {
+        isPrime[candidate] = true;
+    }
+}
+
+void RunSieve() {
+    for (int prime = 2; prime * prime <= upperLimit; prime++) {
+        if (isPrime[prime]) {
+            for (int composite = prime * prime; composite <= upperLimit; composite += prime) {
+                isPrime[composite] = false;
+            }
+        }
+    }
+}
+
+void PrintPrimeList() {
+    Print("Prime numbers up to ");
+    PrintNumber(upperLimit);
+    Print(":\n");
+
+    for (int value = 2; value <= upperLimit; value++) {
+        if (isPrime[value]) {
+            PrintNumber(value);
+            Print("\n");
+        }
+    }
+}
+
+InitializeSieve();
+RunSieve();
+PrintPrimeList();

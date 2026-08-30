@@ -1,0 +1,119 @@
+#include "core/Delay"
+#include "io/TwoWire"
+
+#const int TSL2561_ADDR_FLOAT = 0x39;
+
+#const int TSL2561_COMMAND_BIT = 0x80; // Must be 1
+#const int TSL2561_REGISTER_CONTROL = 0x00;
+#const int TSL2561_REGISTER_TIMING  = 0x01;
+#const int TSL2561_REGISTER_ID      = 0x0A;
+#const int TSL2561_REGISTER_CHAN0_LOW = 0x8C; // (= COMMAND_BIT | 0x0C)
+#const int TSL2561_REGISTER_CHAN1_LOW = 0x8E; // (= COMMAND_BIT | 0x0E)
+
+#const int TSL2561_CONTROL_POWERON  = 0x03;
+#const int TSL2561_CONTROL_POWEROFF = 0x00;
+
+#const int TSL2561_INTEGRATIONTIME_13MS  = 0x00; // 13.7ms
+#const int TSL2561_INTEGRATIONTIME_101MS = 0x01; // 101ms
+#const int TSL2561_INTEGRATIONTIME_402MS = 0x02; // 402ms
+
+#const int TSL2561_GAIN_0X  = 0x00; // No gain
+#const int TSL2561_GAIN_16X = 0x10; // 16x gain
+
+static int tsl_addr  = TSL2561_ADDR_FLOAT;
+static int tsl_intg  = TSL2561_INTEGRATIONTIME_402MS;
+static int tsl_gain  = TSL2561_GAIN_16X;
+static int tsl_ch0   = 0;   // raw broadband
+static int tsl_ch1   = 0;   // raw IR
+
+void tsl_begin(int address) {
+  tsl_addr = address;
+  tsl_setSettings(TSL2561_INTEGRATIONTIME_402MS, TSL2561_GAIN_16X);
+}
+
+void tsl_enable()  { i2c_write8(tsl_addr, TSL2561_COMMAND_BIT | TSL2561_REGISTER_CONTROL, TSL2561_CONTROL_POWERON); }
+void tsl_disable() { i2c_write8(tsl_addr, TSL2561_COMMAND_BIT | TSL2561_REGISTER_CONTROL, TSL2561_CONTROL_POWEROFF); }
+
+void tsl_setSettings(int integration, int gain) {
+  tsl_enable();
+  tsl_intg = integration;
+  tsl_gain = gain;
+  i2c_write8(tsl_addr, TSL2561_COMMAND_BIT | TSL2561_REGISTER_TIMING, (tsl_intg | tsl_gain));
+  tsl_disable();
+}
+
+// Read both channels (updates internal raw values).
+void tsl_update() {
+    tsl_enable();
+
+    // Wait integration time (ADC conversion)
+    if (tsl_intg == TSL2561_INTEGRATIONTIME_13MS) {
+        delay(14);
+    } else if (tsl_intg == TSL2561_INTEGRATIONTIME_101MS) {
+        delay(102);
+    } else {
+        delay(403);
+    }
+
+    // Read CH1 then CH0 (auto-increment from *_LOW)
+    tsl_ch1 = i2c_read16(tsl_addr, TSL2561_REGISTER_CHAN1_LOW);
+    tsl_ch0 = i2c_read16(tsl_addr, TSL2561_REGISTER_CHAN0_LOW);
+
+    tsl_disable();
+}
+
+// ---------------- Lux computation (16-bit only) ----------------
+// We use the T package (datasheet/Adafruit fixed-point constants).
+// Trick to stay 16-bit only:
+//   - Downscale CH0/CH1 by 1024 (>>10) via integer division /1024
+//   - Compute ratio in Q9 as (ch1s * 512) / ch0s  (safe: ch1s<=63 -> *512<=32256)
+//   - Use original K/B/M tables (Qx) and divide final result by 2^(14-10) = 16
+//
+// NOTE: Accurate for 402ms + 16x only (default settings).
+#const int LUX_DIV_AT_END = 16; // 2^(14 - 10)
+
+#const int K1T = 0x0040; #const int B1T = 0x01f2; #const int M1T = 0x01be;
+#const int K2T = 0x0080; #const int B2T = 0x0214; #const int M2T = 0x02d1;
+#const int K3T = 0x00c0; #const int B3T = 0x023f; #const int M3T = 0x037b;
+#const int K4T = 0x0100; #const int B4T = 0x0270; #const int M4T = 0x03fe;
+#const int K5T = 0x0138; #const int B5T = 0x016f; #const int M5T = 0x01fc;
+#const int K6T = 0x019a; #const int B6T = 0x00d2; #const int M6T = 0x00fb;
+#const int K7T = 0x029a; #const int B7T = 0x0018; #const int M7T = 0x0012;
+#const int K8T = 0x029a; #const int B8T = 0x0000; #const int M8T = 0x0000;
+
+int tsl_lux() {
+    // Guard: this implementation is calibrated for 402ms + 16x
+    if (!(tsl_intg == TSL2561_INTEGRATIONTIME_402MS && tsl_gain == TSL2561_GAIN_16X)) {
+        // Return 0 to signal "not supported"; caller can print raw channels instead.
+        return 0;
+    }
+
+    // Downscale to keep multiplications within 16-bit range.
+    int ch0s = tsl_ch0 / 1024; // max ~63
+    int ch1s = tsl_ch1 / 1024; // max ~63
+    if (ch0s == 0) return 0;
+
+    // Ratio in Q9: (ch1/ch0) * 512
+    int ratio = (ch1s * 512) / ch0s;
+
+    // Select coefficients (package T)
+    int b, m;
+    if      (ratio <= K1T) { b = B1T; m = M1T; }
+    else if (ratio <= K2T) { b = B2T; m = M2T; }
+    else if (ratio <= K3T) { b = B3T; m = M3T; }
+    else if (ratio <= K4T) { b = B4T; m = M4T; }
+    else if (ratio <= K5T) { b = B5T; m = M5T; }
+    else if (ratio <= K6T) { b = B6T; m = M6T; }
+    else if (ratio <= K7T) { b = B7T; m = M7T; }
+    else                   { b = B8T; m = M8T; }
+
+    // temp = ch0s*b - ch1s*m   (all 16-bit safe)
+    int t1 = ch0s * b;
+    int t2 = ch1s * m;
+    int temp = t1 - t2;
+    if (temp < 0) temp = 0;
+
+    // Final lux: divide by 2^(14 - 10) = 16 (no >>, pure integer division)
+    int lux = temp / LUX_DIV_AT_END;
+    return lux;
+}

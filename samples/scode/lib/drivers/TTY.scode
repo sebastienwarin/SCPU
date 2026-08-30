@@ -1,0 +1,7 @@
+// DigitalWrite adds IODEV internally: device 1, register 1 is TTY output.
+#const int TTY_OUTPUT = 0x101;
+#include "io/DigitalWrite"
+
+void PrintChar(char c) {
+  DigitalWrite(TTY_OUTPUT, (int)c);
+}

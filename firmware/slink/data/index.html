@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en" ng-app="slink">
+  <head>
+    <title>S-Link</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#0c111b">
+    <link rel="stylesheet" href="/vendor/pico.min.css">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body ng-controller="MainController">
+    <header class="app-header">
+      <div class="app-header__inner">
+        <a class="brand" href="/" aria-label="S-Link home">
+          <img class="brand__mark" src="/favicon.ico?v=2" alt="">
+          <span>
+            <strong>S-Link</strong>
+            <small>S-CPU companion</small>
+          </span>
+        </a>
+        <div class="device-identity" aria-label="Connected device">
+          <span class="connection-dot" ng-class="{'is-online': sysinfo.network.localIP}"></span>
+          <span>{{sysinfo.model || 'ESP32'}}</span>
+          <span class="device-identity__divider"></span>
+          <span class="mono">{{sysinfo.network.localIP || 'Connecting…'}}</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <section class="runtime-bar" aria-label="Runtime status">
+        <div class="runtime-bar__primary">
+          <span class="state-dot" ng-class="status.state ? 'state-dot--success' : 'state-dot--danger'"></span>
+          <strong>S-CPU {{getPowerLabel()}}</strong>
+        </div>
+        <div class="runtime-item">
+          <span>Clock</span>
+          <strong>{{getClockStateLabel()}}</strong>
+        </div>
+        <div class="runtime-item">
+          <span>Source</span>
+          <strong>{{getClockSourceLabel()}}</strong>
+        </div>
+        <div class="runtime-item">
+          <span>Frequency</span>
+          <strong>{{getCurrentFrequencyLabel()}}</strong>
+        </div>
+        <div class="runtime-item" ng-class="{'runtime-item--warning': status.progmode}">
+          <span>Programmer</span>
+          <strong>{{getProgrammerLabel()}}</strong>
+        </div>
+        <div class="runtime-rom" ng-class="{'is-writing': status.job && status.job.active}" title="{{getImageStatusLabel()}}">
+          <span>Image</span>
+          <strong>{{getImageStatusLabel()}}</strong>
+        </div>
+      </section>
+
+      <div class="dashboard">
+        <aside class="control-rail" aria-label="S-CPU controls">
+          <section class="surface control-card">
+            <header class="section-heading">
+              <div>
+                <span class="eyebrow">Runtime</span>
+                <h2>S-CPU control</h2>
+              </div>
+            </header>
+
+            <div class="control-group">
+              <div class="control-group__label">
+                <span>Power</span>
+                <strong ng-class="status.state ? 'text-success' : 'text-muted'">{{getPowerLabel()}}</strong>
+              </div>
+              <div class="segmented segmented--2">
+                <button type="button" ng-class="{'is-active': status.state, 'is-ready': !status.state}" ng-disabled="status.state" ng-click="setPowerState(true)">On</button>
+                <button type="button" ng-class="{'is-danger': status.state}" ng-disabled="!status.state || status.progmode" ng-click="setPowerState(false)">Off</button>
+              </div>
+                <button type="button" class="button-secondary button-block" ng-disabled="!status.state || status.progmode" ng-click="resetScpu()"><span class="button-icon" aria-hidden="true">↻</span> Reset S-CPU</button>
+            </div>
+
+            <div class="control-group">
+              <div class="control-group__label">
+                <span>Clock</span>
+                <strong>{{getClockStateLabel()}}</strong>
+              </div>
+              <button type="button" class="button-primary button-block" ng-hide="status.clock && status.clock.auto" ng-disabled="!status.state || status.progmode || status.clock.source != 1" ng-click="setClock('start')"><span class="button-icon" aria-hidden="true">▶</span> Run clock</button>
+              <button type="button" class="button-secondary button-block" ng-show="status.clock && status.clock.auto" ng-disabled="!status.state || status.progmode || status.clock.source != 1" ng-click="setClock('pause')"><span class="button-icon" aria-hidden="true">Ⅱ</span> Pause clock</button>
+              <div class="segmented segmented--3">
+                <button type="button" ng-disabled="!status.state || status.progmode || (status.clock && status.clock.auto) || status.clock.source != 1" ng-click="setClock('half')">Half</button>
+                <button type="button" ng-disabled="!status.state || status.progmode || (status.clock && status.clock.auto) || status.clock.source != 1" ng-click="setClock('full')">Full</button>
+                <button type="button" ng-disabled="!status.state || status.progmode || (status.clock && status.clock.auto) || status.clock.source != 1" ng-click="setClock('single')">Single</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="surface settings-card">
+            <header class="section-heading">
+              <div>
+                <span class="eyebrow">Signal</span>
+                <h2>Clock setup</h2>
+              </div>
+            </header>
+            <label>
+              <span>Source</span>
+              <select id="clock_source" required ng-change="updateClock()" ng-model="status.clock.source">
+                <option ng-repeat="item in clock_sources" ng-value="item.value">{{item.label}}</option>
+              </select>
+            </label>
+            <label>
+              <span>Frequency</span>
+              <select id="clock_frequency" required ng-change="updateClock()" ng-disabled="status.clock.source != 1" ng-model="status.clock.frequency">
+                <option ng-repeat="item in clock_frequencies" ng-value="item.value">{{item.label}}</option>
+              </select>
+            </label>
+            <div class="frequency-presets" aria-label="Quick frequency presets">
+              <button type="button" ng-class="{'is-active': status.clock.frequency === 10}" ng-disabled="status.clock.source != 1" ng-click="setClockFrequencyPreset({value: 10})">10 Hz</button>
+              <button type="button" ng-class="{'is-active': status.clock.frequency === 100}" ng-disabled="status.clock.source != 1" ng-click="setClockFrequencyPreset({value: 100})">100 Hz</button>
+              <button type="button" ng-class="{'is-active': status.clock.frequency === 1000}" ng-disabled="status.clock.source != 1" ng-click="setClockFrequencyPreset({value: 1000})">1 kHz</button>
+              <button type="button" ng-class="{'is-active': status.clock.frequency === 2000000}" ng-disabled="status.clock.source != 1" ng-click="setClockFrequencyPreset({value: 2000000})">2 MHz</button>
+            </div>
+          </section>
+
+          <details class="surface system-card">
+            <summary>
+              <span>
+                <span class="eyebrow">Device</span>
+                <strong>System status</strong>
+              </span>
+              <span class="system-summary">
+                <span class="storage-icon" aria-hidden="true"></span>
+                <span>{{getStorageUsagePercent() !== null ? getStorageUsagePercent() + '% used' : '—'}}</span>
+              </span>
+            </summary>
+            <dl class="system-list">
+              <div><dt>Model</dt><dd>{{sysinfo.model || '—'}}</dd></div>
+              <div><dt>Wi-Fi</dt><dd>{{sysinfo.network.SSID || '—'}} <small>{{sysinfo.network.RSSI || '—'}} dBm</small></dd></div>
+              <div><dt>IP address</dt><dd class="mono">{{sysinfo.network.localIP || '—'}}</dd></div>
+              <div><dt>Local time</dt><dd>{{formatDateTime(sysinfo.time)}}</dd></div>
+              <div class="usage">
+                <dt>Heap</dt><dd>{{formatBytes(sysinfo.heap.total - sysinfo.heap.free)}} / {{formatBytes(sysinfo.heap.total)}}</dd>
+                <progress value="{{sysinfo.heap.total - sysinfo.heap.free}}" max="{{sysinfo.heap.total}}"></progress>
+              </div>
+              <div class="usage">
+                <dt>Storage</dt><dd>{{formatBytes(sysinfo.SPIFFS.used)}} / {{formatBytes(sysinfo.SPIFFS.total)}}</dd>
+                <progress value="{{sysinfo.SPIFFS.used}}" max="{{sysinfo.SPIFFS.total}}"></progress>
+              </div>
+            </dl>
+          </details>
+        </aside>
+
+        <div class="main-workspace">
+          <section class="surface rom-library">
+            <header class="section-heading section-heading--workspace">
+              <div>
+                <span class="eyebrow">Storage</span>
+                <h1>Image library</h1>
+                <p>Manage and flash images stored on S-Link.</p>
+              </div>
+              <div class="workspace-actions">
+                <button type="button" class="programmer-toggle" ng-class="{'is-active': status.progmode, 'is-ready': !status.progmode && status.state}" ng-disabled="!status.state" ng-click="setProgrammerMode(!status.progmode)" title="{{status.progmode ? 'Disable programming mode' : 'Enable programming mode for ROM operations'}}">
+                  <span class="state-dot" ng-class="status.progmode ? 'state-dot--warning' : ''"></span>
+                  {{status.progmode ? 'Programmer on' : 'Enable programmer'}}
+                </button>
+                <form method="POST" action="/images/upload" enctype="multipart/form-data" class="upload-form">
+                  <input id="image-upload" class="visually-hidden" type="file" name="update" accept=".bin,.hex,.rom" required upload-image>
+                  <label for="image-upload" class="file-picker" ng-class="{'is-uploading': imageUpload.active}">
+                    <span class="upload-spinner" ng-if="imageUpload.active" aria-hidden="true"></span>
+                    <span ng-if="!imageUpload.active" aria-hidden="true">↑</span>
+                    {{imageUpload.active ? 'Uploading ' + imageUpload.progress + '%' : 'Upload image…'}}
+                  </label>
+                </form>
+              </div>
+            </header>
+
+            <div class="upload-feedback" ng-if="imageUpload.active" aria-live="polite">
+              <span><strong>Uploading {{imageUpload.filename}}</strong><b>{{imageUpload.progress}}%</b></span>
+              <progress value="{{imageUpload.progress}}" max="100"></progress>
+            </div>
+
+            <div class="library-toolbar">
+              <label class="search-field">
+                <span class="search-icon" aria-hidden="true"></span>
+                <input type="search" ng-model="romSearch" placeholder="Filter by filename…" aria-label="Filter ROMs by filename">
+              </label>
+              <span class="file-count">{{(roms.files | filter:romSearch).length || 0}} files</span>
+            </div>
+
+            <div class="table-wrap">
+              <table class="rom-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Image</th>
+                    <th scope="col">Size</th>
+                    <th scope="col">Modified</th>
+                    <th scope="col" class="actions-column">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="roms">
+                  <tr ng-if="!roms"><td colspan="4"><span aria-busy="true">Loading images…</span></td></tr>
+                  <tr ng-if="roms && !roms.files.length"><td colspan="4" class="empty-state">No ROM available. Upload an image to get started.</td></tr>
+                  <tr ng-repeat="file in roms.files | filter:romSearch" ng-class="{'is-current': isCurrentRom(file), 'is-programming': isActiveJobFile(file)}">
+                    <td data-label="Image">
+                      <div class="rom-name">
+                        <span class="file-icon" aria-hidden="true">BIN</span>
+                        <span>
+                          <strong ng-if="!file.editing">{{file.path}}</strong>
+                          <input type="text" ng-if="file.editing" ng-model="file.newName" focus-me="file.editing" ng-blur="cancelEdit(file)" ng-keydown="handleRenameKey($event, file)">
+                          <small ng-if="isCurrentRom(file) && !isActiveJobFile(file)">Last flashed</small>
+                          <div class="row-job-progress" ng-if="isActiveJobFile(file)">
+                            <span><strong>{{currentJobStatus || 'Writing image…'}}</strong><b>{{getJobProgress() | number:0}}%</b></span>
+                            <progress value="{{getJobProgress()}}" max="100"></progress>
+                            <small>
+                              <span>{{status.job.written}} / {{status.job.totalSize}} bytes</span>
+                              <span>{{formatDuration(status.job.duration)}} · {{formatTransferSpeed(status.job.speed)}}</span>
+                            </small>
+                          </div>
+                        </span>
+                      </div>
+                    </td>
+                    <td data-label="Size">{{formatBytes(file.size)}}</td>
+                    <td data-label="Modified">{{formatDateTime(file.lastwrite)}}</td>
+                    <td data-label="Actions">
+                      <div class="row-actions">
+                        <button type="button" class="button-primary button-small" ng-disabled="!status.state || (status.job && status.job.active)" title="{{status.state ? 'Flash ' + file.path : 'Power on the S-CPU to flash'}}" ng-click="flashRom(file)">Flash</button>
+                        <button type="button" class="icon-button" title="Rename {{file.path}}" aria-label="Rename {{file.path}}" ng-click="enableEdit(file)">✎</button>
+                        <button type="button" class="icon-button icon-button--danger" title="Delete {{file.path}}" aria-label="Delete {{file.path}}" ng-click="deleteRom(file)">×</button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </section>
+
+          <details class="advanced-tools surface">
+            <summary>
+              <span>
+                <span class="eyebrow">Advanced</span>
+                <strong>Memory tools</strong>
+              </span>
+              <span class="summary-hint">Open tools</span>
+            </summary>
+
+            <div class="tools-grid">
+              <section class="tool-pane tool-pane--memory">
+                <header class="tool-pane__header">
+                  <div><h2>Memory viewer</h2><p>Inspect ROM or RAM data.</p></div>
+                  <div class="memory-header-actions">
+                    <button type="button" class="button-danger" ng-if="memoryViewer.target === 'ROM'" ng-disabled="!status.progmode" title="{{status.progmode ? 'Erase the entire ROM' : 'Enable programmer mode to erase ROM'}}" ng-click="eraseFlash()">Erase ROM</button>
+                    <div class="segmented">
+                      <button type="button" ng-class="{'is-active': memoryViewer.target === 'ROM'}" ng-click="setMemoryTarget('ROM')">ROM</button>
+                      <button type="button" ng-class="{'is-active': memoryViewer.target === 'RAM'}" ng-click="setMemoryTarget('RAM')">RAM</button>
+                    </div>
+                  </div>
+                </header>
+                <div class="memory-prerequisite" ng-if="!status.progmode">
+                  <span><strong>Programmer required</strong><small>Enable it to access ROM and RAM through the S-Link bus.</small></span>
+                  <button type="button" class="button-primary" ng-disabled="!status.state" ng-click="setProgrammerMode(true)">Enable programmer</button>
+                </div>
+                <div class="memory-form">
+                  <label><span>Address <small ng-if="memoryViewer.target === 'RAM'">(RAM offset)</small></span><input type="number" min="0" max="65535" ng-model="memoryViewer.address"></label>
+                  <label><span>Count</span><input type="number" min="1" max="2048" ng-model="memoryViewer.count"></label>
+                </div>
+                <div class="tool-actions">
+                  <button type="button" class="button-secondary" ng-click="readPreviousMemory()" ng-disabled="memoryViewer.busy || !status.progmode || memoryViewer.address <= 0">‹ Previous</button>
+                  <button type="button" class="button-primary" ng-click="readMemory()" ng-disabled="memoryViewer.busy || !status.progmode">Read</button>
+                  <button type="button" class="button-secondary" ng-click="readNextMemory()" ng-disabled="memoryViewer.busy || !status.progmode || !canReadNextMemory()">Next ›</button>
+                  <button type="button" class="button-secondary memory-download" ng-click="downloadMemory()" ng-disabled="memoryViewer.busy || !status.progmode">Download {{memoryViewer.target}}</button>
+                  <button type="button" class="button-primary memory-capture" ng-if="memoryViewer.target === 'RAM'" ng-click="captureRam()" ng-disabled="memoryViewer.busy || !status.progmode">{{memoryViewer.busy ? 'Capturing…' : 'Capture RAM'}}</button>
+                  <button type="button" class="button-quiet" ng-click="clearMemoryOutput()">Clear</button>
+                </div>
+                <div class="memory-output__header">
+                  <div><span>{{memoryViewer.target}} output</span><span>{{memoryViewer.status}}</span></div>
+                  <div class="output-view-toggle" aria-label="Memory output format">
+                    <button type="button" ng-if="memoryViewer.target === 'RAM'" ng-class="{'is-active': memoryViewer.view === 'inspector'}" ng-click="setMemoryView('inspector')">Inspector</button>
+                    <button type="button" ng-class="{'is-active': memoryViewer.view === 'hex'}" ng-click="setMemoryView('hex')">Hex</button>
+                    <button type="button" ng-class="{'is-active': memoryViewer.view === 'json'}" ng-click="setMemoryView('json')">JSON</button>
+                  </div>
+                </div>
+                <div class="memory-output memory-inspector" ng-if="memoryViewer.view === 'inspector'">
+                  <div class="inspector-empty" ng-if="!memoryViewer.inspector">
+                    <strong>No RAM snapshot yet</strong>
+                    <span>Capture the complete 2K-word RAM while Programmer mode owns the buses.</span>
+                    <button type="button" class="button-primary" ng-click="captureRam()" ng-disabled="memoryViewer.busy || !status.progmode">Capture RAM</button>
+                  </div>
+                  <div ng-if="memoryViewer.inspector">
+                    <div class="inspector-meta">
+                      <span>Snapshot {{memoryViewer.inspector.capturedAt | date:'mediumTime'}}</span>
+                      <span>2048 words</span>
+                    </div>
+                    <section class="inspector-section">
+                      <h3>CPU state</h3>
+                      <div class="register-grid">
+                        <button type="button" class="register-card" ng-repeat="register in memoryViewer.inspector.registers track by register.name"
+                                ng-click="openRamOffset(register.pointerOffset !== null ? register.pointerOffset : register.offset)"
+                                title="{{register.label}} · stored at RAM {{formatRamAddress(register.offset)}}">
+                          <span>{{register.name}}</span><strong>{{register.hex}}</strong>
+                          <small ng-if="register.pointerOffset !== null">→ {{formatRamAddress(register.pointerOffset)}}</small>
+                        </button>
+                      </div>
+                    </section>
+                    <section class="inspector-section">
+                      <div class="inspector-section-heading">
+                        <h3>RAM map</h3>
+                        <label class="address-mode">
+                          <span>Addresses</span>
+                          <select ng-model="memoryViewer.addressMode">
+                            <option value="cpu">CPU · 0x2000</option>
+                            <option value="virtual">S-CPU virtual · 0x12000</option>
+                            <option value="offset">RAM offset · 0x000</option>
+                          </select>
+                        </label>
+                      </div>
+                      <div class="ram-map">
+                        <button type="button" class="ram-region ram-region--{{region.className}}"
+                                ng-repeat="region in memoryViewer.regions track by region.name"
+                                ng-click="openRamOffset(region.start)">
+                          <strong>{{region.name}}</strong>
+                          <span>{{formatRamAddress(region.start)}}–{{formatRamAddress(region.end)}}</span>
+                        </button>
+                      </div>
+                    </section>
+                    <section class="inspector-section">
+                      <div class="inspector-section-heading">
+                        <h3>Stack</h3>
+                        <small ng-if="memoryViewer.inspector.stackValid">{{getRamAddressModeLabel()}} · SP {{formatRamAddress(memoryViewer.inspector.spOffset)}} · FP {{formatRamAddress(memoryViewer.inspector.fpOffset)}}</small>
+                      </div>
+                      <div class="inspector-warning" ng-if="!memoryViewer.inspector.stackValid">SP does not point inside the stack region.</div>
+                      <div class="stack-layout" ng-if="memoryViewer.inspector.stackValid">
+                        <div class="frame-list">
+                          <h4>Frames</h4>
+                          <button type="button" ng-repeat="frame in memoryViewer.inspector.frames track by frame.index" ng-click="openRamOffset(frame.fpOffset)">
+                            <span>#{{frame.index}} · FP {{formatRamAddress(frame.fpOffset)}}</span>
+                            <strong>Return 0x{{frame.returnAddress | numberToHex}}</strong>
+                          </button>
+                          <span class="empty-note" ng-if="!memoryViewer.inspector.frames.length">No valid frame chain.</span>
+                        </div>
+                        <div class="stack-table-wrap">
+                          <table class="stack-table">
+                            <thead><tr><th>Address</th><th>Value</th><th>Interpretation</th></tr></thead>
+                            <tbody>
+                              <tr ng-repeat="entry in memoryViewer.inspector.stackEntries track by entry.offset" ng-click="openRamOffset(entry.offset)">
+                                <td>{{formatRamAddress(entry.offset)}}</td><td>0x{{entry.value | numberToHex}}</td><td>{{entry.role || 'Stack value'}}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </div>
+                <div class="memory-output memory-hex-viewer" ng-if="memoryViewer.view === 'hex'" hex-selection tabindex="0">
+                  <div class="hex-empty" ng-if="!memoryViewer.hexRows.length">No data read yet.</div>
+                  <div class="hex-row" ng-repeat="row in memoryViewer.hexRows track by $index">
+                    <span class="hex-address">{{row.byteAddress}}</span>
+                    <span class="hex-words">
+                      <span class="hex-word" ng-repeat="word in row.words track by word.index"
+                            ng-class="{'is-selected': isHexWordSelected(word.index)}"
+                            ng-mousedown="startHexSelection(word.index, $event)"
+                            ng-mouseenter="extendHexSelection(word.index)">{{word.hex}}</span>
+                    </span>
+                    <span class="hex-ascii">
+                      <span class="hex-ascii-word" ng-repeat="word in row.words track by word.index"
+                            ng-class="{'is-selected': isHexWordSelected(word.index)}">{{word.ascii}}</span>
+                    </span>
+                  </div>
+                </div>
+                <pre class="memory-output memory-json-output" ng-if="memoryViewer.view === 'json'">{{memoryViewer.output}}</pre>
+              </section>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <dialog scope-binding="dialogBox">
+        <article>
+          <h2>{{dialog.title}}</h2>
+          <p ng-if="!dialog.html && dialog.kind !== 'flash'">{{dialog.text}}</p>
+          <div class="flash-confirmation" ng-if="dialog.kind === 'flash'">
+            <p>You are about to write this image to the S-CPU ROM.</p>
+            <dl>
+              <div><dt>Image</dt><dd>{{dialog.file.path}}</dd></div>
+              <div><dt>Size</dt><dd>{{formatBytes(dialog.file.size)}}</dd></div>
+            </dl>
+            <label class="flash-option">
+              <input type="checkbox" ng-model="flashOptions.autoRunAfterFlash">
+              <span>
+                <strong>Run after flash</strong>
+                <small ng-if="status.clock.source == 1">Exit programming mode, reset the S-CPU and start the S-Link clock.</small>
+                <small ng-if="status.clock.source != 1">Exit programming mode, reset the S-CPU, and resume the configured NE555 clock.</small>
+              </span>
+            </label>
+            <p class="programmer-notice" ng-if="!status.progmode"><strong>Programming mode will be enabled automatically</strong> before writing this image.</p>
+            <p class="flash-option-note" ng-if="!flashOptions.autoRunAfterFlash">Programming mode will remain enabled after the flash.</p>
+          </div>
+          <div ng-if="dialog.html" ng-bind-html="dialog.html"></div>
+          <footer>
+            <button ng-show="dialog.cancel" ng-click="dialog.cancel()" class="button-secondary">Cancel</button>
+            <button ng-show="dialog.confirm" ng-click="dialog.confirm()" class="button-primary">{{dialog.confirmLabel || 'Confirm'}}</button>
+            <button ng-show="dialog.ok" ng-click="dialog.ok()" class="button-primary">OK</button>
+          </footer>
+        </article>
+      </dialog>
+    </main>
+
+    <footer class="app-footer">S-Link <span>•</span> The S-CPU companion</footer>
+    <script src="/vendor/angular.min.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

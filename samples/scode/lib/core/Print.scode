@@ -1,0 +1,35 @@
+void Print(string str)
+{
+  char* pointer = str;
+  while (*pointer != '\0')
+  {
+    PrintChar(*pointer);
+    pointer++;
+  };
+}
+
+void PrintNumber(int number)
+{
+  // Negative number
+  if (number < 0)
+  {
+    PrintChar('-');
+    number = -number;
+  }
+
+  // Display digits
+  PrintDigits(number);
+}
+
+void PrintDigits(int number)
+{
+  // If the number is greater than or equal to 10, it means there are multiple digits
+  if (number >= 10)
+  {
+    // Recursive call with the number excluding the last digit.
+    PrintDigits(number / 10);
+  }
+  
+  // Display the current digit by adding 48 to convert it to its ASCII code.
+  PrintChar((number % 10) + 48);
+}

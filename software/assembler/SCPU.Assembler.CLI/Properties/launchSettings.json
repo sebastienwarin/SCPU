@@ -1,0 +1,16 @@
+{
+  "profiles": {
+    "Assemble BlinkLED for Gowin": {
+      "commandName": "Project",
+      "commandLineArgs": "\"..\\..\\..\\..\\..\\..\\samples\\asm\\BlinkLED.asm\" -d FREQ_HZ=81_000_000 -f gowin -o \"..\\..\\..\\..\\..\\..\\hardware\\gowin\\src\\gowin_dpb\\rom.mi\""
+    },
+    "Assemble AutoTest for Digital": {
+      "commandName": "Project",
+      "commandLineArgs": "\"..\\..\\..\\..\\..\\..\\samples\\asm\\AutoTest.asm\" -f logisim16 -o \"..\\..\\..\\..\\..\\..\\hardware\\digital\\rom.hex\""
+    },
+    "Assemble AutoTest": {
+      "commandName": "Project",
+      "commandLineArgs": "\"..\\..\\..\\..\\..\\..\\samples\\asm\\AutoTest.asm\" -p"
+    }
+  }
+}

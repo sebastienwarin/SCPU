@@ -1,0 +1,318 @@
+// =============================================================================
+// S-CODE SAMPLE - SNAKE
+// =============================================================================
+// What it does:
+//   Runs Snake on the 20x4 LCD with four directional buttons and random food.
+// Expected result:
+//   The snake moves around the LCD, grows when it reaches '*', and restarts after
+//   hitting a wall or itself.
+// Runs on:
+//   S-CPU TTL with the LCD2004, physical input board, and DS3231 RTC.
+// Real hardware required:
+//   Yes. These peripherals are not emulated by the software simulators.
+// Demonstrates:
+//   A game loop, arrays, collision, input, random generation, and LCD rendering.
+// =============================================================================
+#include "core/Delay"
+#include "core/Random"
+#include "core/Print"
+#include "io/DigitalRead"
+#include "drivers/DS3231"
+#include "drivers/HD44780"
+
+// =====================
+// Hardware config
+// =====================
+// DigitalRead adds IODEV internally: device 3, register 1.
+#const int INPUT_BOARD = 0x301;
+#const int BTN_UP    = 1 << 3;
+#const int BTN_DOWN  = 1 << 6;
+#const int BTN_LEFT  = 1 << 5;
+#const int BTN_RIGHT = 1 << 7;
+
+// =====================
+// Game config
+// =====================
+#const int WIDTH       = 20;     // LCD2004 = 20 columns
+#const int HEIGHT      = 4;      // rows 0-3 playfield (full LCD)
+#const int MAX_LEN     = WIDTH * HEIGHT;
+#const int TICK_MS     = 140;    // game speed tuned for full-screen playfield
+#const int WRAP_AROUND = 0;      // 0 = walls kill, 1 = wrap
+
+// Glyphs
+#const char CH_EMPTY = ' ';
+#const char CH_HEAD  = '@';
+#const char CH_BODY  = 'o';
+#const char CH_FOOD  = '*';
+
+// =====================
+// Globals variables
+// =====================
+// Array sizes currently require an integer literal, so MAX_LEN cannot be used
+// in these declarations yet.
+int snakeX[60];
+int snakeY[60];
+int snakeLen;
+int dirX;   // -1,0,1
+int dirY;   // -1,0,1
+int foodX;
+int foodY;
+int score;
+
+// =====================
+// LCD helpers
+// =====================
+void PutChar(int x, int y, char ch)
+{
+    if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return;
+    lcd_setCursor(x, y);
+    lcd_print(ch);
+}
+
+// =====================
+// Input (active-low)
+// =====================
+int ButtonsRaw()
+{
+    return DigitalRead(INPUT_BOARD);
+}
+bool IsPressed(int mask)
+{
+    // Active-low => pressed when bit == 0
+    return (ButtonsRaw() & mask) == 0;
+}
+
+void PollDirection()
+{
+    // Prevent 180° reverse: only allow orthogonal changes or forward
+    if (IsPressed(BTN_UP) && dirY != 1)
+    {
+        dirX = 0; dirY = -1;
+        return;
+    }
+    if (IsPressed(BTN_DOWN) && dirY != -1)
+    {
+        dirX = 0; dirY = 1;
+        return;
+    }
+    if (IsPressed(BTN_LEFT) && dirX != 1)
+    {
+        dirX = -1; dirY = 0;
+        return;
+    }
+    if (IsPressed(BTN_RIGHT) && dirX != -1)
+    {
+        dirX = 1; dirY = 0;
+        return;
+    }
+}
+
+// =====================
+// Game logic
+// =====================
+bool OccupiedBySnake(int x, int y)
+{
+    int i = 0;
+    while (i < snakeLen)
+    {
+        if (snakeX[i] == x && snakeY[i] == y) return true;
+        i = i + 1;
+    }
+    return false;
+}
+
+bool OccupiedBySnakeExceptTail(int x, int y)
+{
+    // Used when not growing: the current tail cell will be released this tick.
+    int i = 0;
+    int last = snakeLen - 1;
+    while (i < last)
+    {
+        if (snakeX[i] == x && snakeY[i] == y) return true;
+        i = i + 1;
+    }
+    return false;
+}
+
+void SpawnFood()
+{
+    // Place food on an empty cell
+    while (true)
+    {
+        int x = randRange(WIDTH);
+        int y = randRange(HEIGHT);
+        if (!OccupiedBySnake(x, y))
+        {
+            foodX = x; foodY = y;
+            PutChar(foodX, foodY, CH_FOOD);
+            return;
+        }
+    }
+}
+
+bool MoveSnake()
+{
+    // Compute next head
+    int hx = snakeX[0];
+    int hy = snakeY[0];
+    int nx = hx + dirX;
+    int ny = hy + dirY;
+
+    // Boundaries
+    if (WRAP_AROUND == 1)
+    {
+        if (nx < 0) nx = WIDTH - 1;
+        if (nx >= WIDTH) nx = 0;
+        if (ny < 0) ny = HEIGHT - 1;
+        if (ny >= HEIGHT) ny = 0;
+    }
+    else
+    {
+        if (nx < 0 || nx >= WIDTH || ny < 0 || ny >= HEIGHT) return false; // hit wall
+    }
+
+    // Did we eat?
+    bool grow = (nx == foodX && ny == foodY);
+
+    // Self-collision
+    if (grow)
+    {
+        if (OccupiedBySnake(nx, ny)) return false;
+    }
+    else
+    {
+        if (OccupiedBySnakeExceptTail(nx, ny)) return false;
+    }
+
+    // Growing adds one slot before the body shift, so the old tail is copied
+    // into that new slot. Without growth, erase the tail that will be dropped.
+    if (grow && snakeLen < MAX_LEN)
+    {
+        snakeLen = snakeLen + 1;
+    }
+    else
+    {
+        int tx = snakeX[snakeLen - 1];
+        int ty = snakeY[snakeLen - 1];
+        PutChar(tx, ty, CH_EMPTY);
+    }
+
+    // Shift body back from tail to head
+    int i = snakeLen - 1;
+    while (i > 0)
+    {
+        snakeX[i] = snakeX[i - 1];
+        snakeY[i] = snakeY[i - 1];
+        i = i - 1;
+    }
+
+    // New head
+    snakeX[0] = nx;
+    snakeY[0] = ny;
+
+    // Grow if needed
+    if (grow)
+    {
+        score = score + 1;
+        if (snakeLen < MAX_LEN)
+        {
+            SpawnFood();
+        }
+        else
+        {
+            // The playfield is full: leave no active food coordinate.
+            foodX = -1;
+            foodY = -1;
+        }
+    }
+
+    // Redraw head/body minimal diff
+    // Head
+    PutChar(nx, ny, CH_HEAD);
+    // Old head becomes body (only if length > 1)
+    if (snakeLen > 1)
+    {
+        PutChar(hx, hy, CH_BODY);
+    }
+    return true;
+}
+
+void GameInit()
+{
+    lcd_clear();
+    score = 0;
+
+    // Start in the middle, moving right
+    snakeLen = 3;
+    dirX = 1; dirY = 0;
+
+    int cx = WIDTH / 2;
+    int cy = HEIGHT / 2;
+
+    snakeX[0] = cx + 0; snakeY[0] = cy;
+    snakeX[1] = cx - 1; snakeY[1] = cy;
+    snakeX[2] = cx - 2; snakeY[2] = cy;
+
+    // Draw initial snake
+    PutChar(snakeX[2], snakeY[2], CH_BODY);
+    PutChar(snakeX[1], snakeY[1], CH_BODY);
+    PutChar(snakeX[0], snakeY[0], CH_HEAD);
+
+    SpawnFood();
+}
+
+void GameOverScreen()
+{
+    // Simple overlay on line 1..3
+    lcd_setCursor(3, 1); Print("GAME OVER");
+    lcd_setCursor(3, 2); Print("Score: "); PrintNumber(score);
+    lcd_setCursor(1, 3); Print("Press button...");
+}
+
+// =====================
+// Main
+// =====================
+int main()
+{
+    // Init LCD
+    lcd_begin();
+    
+    // Init DS3231 & generate seed from RTC registers (time + temp)
+    rtc_begin(RTC_DS3231_ADDR);
+    srand16(rtc_getSeed16());
+
+    // Init game
+    GameInit();
+
+    // Main loop
+    while (true)
+    {
+        PollDirection();
+        bool alive = MoveSnake();
+        if (!alive)
+        {
+            GameOverScreen();
+            // Wait a bit then restart when any button is pressed
+            int t = 0;
+            while (t < 1500)
+            {
+                delay(10);
+                t = t + 10;
+            }
+            while (!IsPressed(BTN_UP) && !IsPressed(BTN_DOWN) &&
+                   !IsPressed(BTN_LEFT) && !IsPressed(BTN_RIGHT))
+            {
+                delay(10);
+            }
+            GameInit();
+        }
+        else
+        {
+            delay(TICK_MS);
+        }
+    }
+
+    return 0;
+}
+
+main();

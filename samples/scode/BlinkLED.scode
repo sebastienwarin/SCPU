@@ -1,0 +1,37 @@
+// =============================================================================
+// S-CODE SAMPLE - BLINK LED
+// =============================================================================
+// What it does:
+//   Toggles the device-0 LED every 500 milliseconds.
+// Expected result:
+//   The LED repeatedly turns on and off at a steady one-second cycle.
+// Runs on:
+//   Desktop/CLI simulators and S-CPU targets exposing the device-0 LED. Set
+//   FREQ_HZ to the actual target clock for accurate timing.
+// Demonstrates:
+//   Includes, boolean state, ternary, MMIO output, and reusable delay code.
+// =============================================================================
+
+#include "core/Delay"
+#include "io/DigitalWrite"
+
+// DigitalWrite adds the IODEV base internally, so this is an MMIO offset.
+#const int LED_BANK = 0x002; // device 0, register 2: LED bank
+#const int DELAY_MS = 500;           // blink interval (ms)
+
+bool ledState = false;
+while (true) {
+    ledState = !ledState;                        // toggle state
+    DigitalWrite(LED_BANK, ledState ? 1 : 0);  // update LED
+    delay(DELAY_MS);
+}
+
+/*
+    // --- Basic version: explicit ON/OFF ---
+    while (true) {
+        DigitalWrite(LED_BANK, 1);
+        delay(1000);
+        DigitalWrite(LED_BANK, 0);
+        delay(1000);
+    }
+*/

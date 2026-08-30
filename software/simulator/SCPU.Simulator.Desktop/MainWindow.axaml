@@ -1,0 +1,372 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:SCPU.Simulator.Desktop.ViewModels"
+        xmlns:infrastructure="using:SCPU.Simulator.Desktop.Infrastructure"
+        xmlns:controls="using:SCPU.Simulator.Desktop.Controls"
+        xmlns:exporters="using:SCPU.Assembler.Exporters"
+        x:Class="SCPU.Simulator.Desktop.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{Binding WindowTitle}"
+        Icon="/Assets/favicon.ico"
+        Width="1440" Height="900"
+        MinWidth="960" MinHeight="640">
+  <Window.KeyBindings>
+    <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenCommand}"/>
+    <KeyBinding Gesture="Ctrl+F5" Command="{Binding ReloadCommand}"/>
+    <KeyBinding Gesture="F5" Command="{Binding RunPauseCommand}"/>
+    <KeyBinding Gesture="F9" Command="{Binding StepCommand}"/>
+    <KeyBinding Gesture="F10" Command="{Binding SourceStepCommand}"/>
+    <KeyBinding Gesture="F8" Command="{Binding StepCycleCommand}"/>
+    <KeyBinding Gesture="Ctrl+R" Command="{Binding RestartCommand}"/>
+    <KeyBinding Gesture="Ctrl+Shift+F5" Command="{Binding ResetCommand}"/>
+    <KeyBinding Gesture="Ctrl+Shift+F9" Command="{Binding ClearBreakpointsCommand}"/>
+    <KeyBinding Gesture="Ctrl+Shift+F10" Command="{Binding ClearWatchesCommand}"/>
+    <KeyBinding Gesture="Ctrl+B" Command="{Binding ToggleBreakpointCommand}"/>
+  </Window.KeyBindings>
+  <Grid RowDefinitions="Auto,Auto,*,Auto">
+    <Menu>
+      <MenuItem Header="_File">
+        <MenuItem Header="_Open…" Command="{Binding OpenCommand}" InputGesture="Ctrl+O"/>
+        <MenuItem Header="_Reload" Command="{Binding ReloadCommand}" InputGesture="Ctrl+F5"/>
+        <Separator/>
+        <MenuItem Header="_Export">
+          <MenuItem Header="_Binary" Command="{Binding ExportCommand}" CommandParameter="{x:Static exporters:OutputFormat.Binary}"/>
+          <MenuItem Header="_Intel HEX" Command="{Binding ExportCommand}" CommandParameter="{x:Static exporters:OutputFormat.IntelHex}"/>
+          <MenuItem Header="_Logisim 16" Command="{Binding ExportCommand}" CommandParameter="{x:Static exporters:OutputFormat.Logisim16}"/>
+          <Separator/>
+          <MenuItem Header="_Annotated listing" Command="{Binding ExportCommand}" CommandParameter="{x:Static exporters:OutputFormat.Annotated}"/>
+          <MenuItem Header="_Verilog" Command="{Binding ExportCommand}" CommandParameter="{x:Static exporters:OutputFormat.Verilog}"/>
+          <MenuItem Header="_Gowin" Command="{Binding ExportCommand}" CommandParameter="{x:Static exporters:OutputFormat.Gowin}"/>
+          <MenuItem Header="_Symbols" Command="{Binding ExportCommand}" CommandParameter="{x:Static exporters:OutputFormat.Symbol}"/>
+        </MenuItem>
+        <Separator/>
+        <MenuItem Header="E_xit" Click="OnExit"/>
+      </MenuItem>
+      <MenuItem Header="_Debug">
+        <MenuItem Header="{Binding RunPauseLabel}" Command="{Binding RunPauseCommand}" InputGesture="F5"/>
+        <MenuItem Header="Step _cycle" Command="{Binding StepCycleCommand}" InputGesture="F8"/>
+        <MenuItem Header="_Step instruction" Command="{Binding StepCommand}" InputGesture="F9"/>
+        <MenuItem Header="_Next source line" Command="{Binding SourceStepCommand}" InputGesture="F10"/>
+        <MenuItem Header="_Restart" Command="{Binding RestartCommand}" InputGesture="Ctrl+R"/>
+        <MenuItem Header="_Reset" Command="{Binding ResetCommand}" InputGesture="Ctrl+Shift+F5"/>
+        <Separator/>
+        <MenuItem Header="Stop on _HALT" ToggleType="CheckBox" IsChecked="{Binding StopOnHalt, Mode=OneWay}" Command="{Binding ToggleStopOnHaltCommand}"/>
+        <Separator/>
+        <MenuItem Header="Remove all _breakpoints" Command="{Binding ClearBreakpointsCommand}" InputGesture="Ctrl+Shift+F9"/>
+        <MenuItem Header="{Binding SelectedRomBreakpointActionLabel}" Command="{Binding ToggleBreakpointCommand}" InputGesture="Ctrl+B"/>
+        <MenuItem Header="Remove all _watches" Command="{Binding ClearWatchesCommand}" InputGesture="Ctrl+Shift+F10"/>
+        <Separator/>
+        <MenuItem Header="_Go to address or symbol..." Click="OnGotoAddress" InputGesture="Ctrl+G"/>
+      </MenuItem>
+      <MenuItem Header="_Export" IsVisible="False">
+        <MenuItem Header="_Binary" Command="{Binding ExportCommand}" CommandParameter="{x:Static exporters:OutputFormat.Binary}"/>
+        <MenuItem Header="_Intel HEX" Command="{Binding ExportCommand}" CommandParameter="{x:Static exporters:OutputFormat.IntelHex}"/>
+        <MenuItem Header="_Logisim 16" Command="{Binding ExportCommand}" CommandParameter="{x:Static exporters:OutputFormat.Logisim16}"/>
+        <Separator/>
+        <MenuItem Header="_Annotated listing" Command="{Binding ExportCommand}" CommandParameter="{x:Static exporters:OutputFormat.Annotated}"/>
+        <MenuItem Header="_Verilog" Command="{Binding ExportCommand}" CommandParameter="{x:Static exporters:OutputFormat.Verilog}"/>
+        <MenuItem Header="_Gowin" Command="{Binding ExportCommand}" CommandParameter="{x:Static exporters:OutputFormat.Gowin}"/>
+        <MenuItem Header="_Symbols" Command="{Binding ExportCommand}" CommandParameter="{x:Static exporters:OutputFormat.Symbol}"/>
+      </MenuItem>
+      <MenuItem Header="_View">
+        <MenuItem Header="_CPU / Datapath panel" ToggleType="CheckBox" IsChecked="{Binding IsCpuPanelExpanded, Mode=OneWay}" Command="{Binding ToggleCpuPanelCommand}"/>
+        <MenuItem Header="_I/O and Diagnostics panel" ToggleType="CheckBox" IsChecked="{Binding IsBottomPanelExpanded, Mode=OneWay}" Command="{Binding ToggleBottomPanelCommand}"/>
+      </MenuItem>
+      <MenuItem Header="_Help">
+        <MenuItem Header="_Learn about S-CPU on BuildACPU.com" Click="OnOpenBuildACPU"/>
+        <Separator/>
+        <MenuItem Header="_About S-CPU Simulator" Click="OnShowAbout"/>
+      </MenuItem>
+    </Menu>
+
+    <Border Grid.Row="1" Background="{StaticResource ScpuRaised}" Padding="10,6">
+      <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
+        <Button Command="{Binding OpenCommand}" Content="Open (Ctrl+O)"/>
+        <Button Grid.Column="1" Command="{Binding RunPauseCommand}" Content="{Binding RunPauseLabel}"/>
+        <Button Grid.Column="2" Command="{Binding StepCommand}" Content="Instruction (F9)"/>
+        <Button Grid.Column="3" Command="{Binding SourceStepCommand}" Content="Next source line (F10)" ToolTip.Tip="Run until execution reaches a different mapped source line"/>
+        <Button Grid.Column="4" Command="{Binding ResetCommand}" Content="Reset (Ctrl+Shift+F5)"/>
+        <ComboBox Grid.Column="6" Width="120" ItemsSource="{Binding Speeds}" SelectedItem="{Binding SelectedSpeed}"/>
+        <Border Grid.Column="7" Background="{StaticResource ScpuPanel}" CornerRadius="3" Padding="10,4">
+          <TextBlock Foreground="{StaticResource ScpuGreen}" Text="{Binding State}"/>
+        </Border>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="2" Margin="10">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="{Binding CpuPanelWidth}" MinWidth="{Binding CpuPanelMinWidth}"/>
+        <ColumnDefinition Width="{Binding CpuSplitterWidth}"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="{Binding BottomSplitterHeight}"/>
+        <RowDefinition Height="{Binding BottomPanelHeight}" MinHeight="{Binding BottomPanelMinHeight}"/>
+      </Grid.RowDefinitions>
+      <Border x:Name="CpuPanelHost" Classes="toolPanel" Padding="6">
+        <Grid RowDefinitions="Auto,*">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock IsVisible="{Binding IsCpuPanelExpanded}" Classes="panelTitle" Margin="6,4" Text="CPU / DATAPATH"/>
+            <Button Grid.Column="1" Classes="toolWindowChevron" IsVisible="{Binding IsCpuPanelExpanded}" Width="24" Height="24" Command="{Binding ToggleCpuPanelCommand}" Content="&#x25C0;" ToolTip.Tip="Collapse CPU panel"/>
+            <Button Grid.Column="1" Classes="toolWindowChevron" IsVisible="{Binding !IsCpuPanelExpanded}" Width="18" Height="22" Command="{Binding ToggleCpuPanelCommand}" Content="&#x25B6;" ToolTip.Tip="Expand CPU panel"/>
+          </Grid>
+          <TextBlock Grid.RowSpan="2" IsVisible="{Binding !IsCpuPanelExpanded}" Classes="panelTitle"
+                     Width="160" Height="24" TextWrapping="NoWrap"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" Text="CPU / DATAPATH"
+                     RenderTransformOrigin="50%,50%">
+            <TextBlock.RenderTransform><RotateTransform Angle="-90"/></TextBlock.RenderTransform>
+          </TextBlock>
+          <ScrollViewer Grid.Row="1" IsVisible="{Binding IsCpuPanelExpanded}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*" RowSpacing="10" Margin="6,6,6,0">
+          <Border Height="0"/>
+          <Grid Grid.Row="1" ColumnDefinitions="90,*"><TextBlock Text="AC"/><TextBlock Grid.Column="1" Classes="mono" Foreground="{StaticResource ScpuAmber}" Text="{Binding Accumulator}"/></Grid>
+          <Grid Grid.Row="2" ColumnDefinitions="90,*"><TextBlock Text="IR"/><TextBlock Grid.Column="1" Classes="mono" Text="{Binding InstructionRegister}"/></Grid>
+          <Grid Grid.Row="3" ColumnDefinitions="90,*"><TextBlock Text="PC"/><TextBlock Grid.Column="1" Classes="mono" Foreground="{StaticResource ScpuCyan}" Text="{Binding ProgramCounter}"/></Grid>
+          <Grid Grid.Row="4" ColumnDefinitions="90,*"><TextBlock Text="FLAGS"/><TextBlock Grid.Column="1" Classes="mono" Text="{Binding Flags}"/></Grid>
+          <TextBlock Grid.Row="5" Classes="panelTitle" Margin="0,12,0,0" Text="DECODE"/>
+          <TextBlock Grid.Row="6" Classes="mono" Foreground="{StaticResource ScpuAmber}" Text="{Binding CurrentInstruction}" TextWrapping="Wrap"/>
+          <TextBlock Grid.Row="7" Classes="mono" Opacity="0.75" Text="{Binding AddressingDetails}"/>
+          <Grid Grid.Row="8" ColumnDefinitions="90,*"><TextBlock Text="NEXT"/><TextBlock Grid.Column="1" Classes="mono" Text="{Binding NextInstruction}" TextWrapping="Wrap"/></Grid>
+          <TextBlock Grid.Row="9" Classes="panelTitle" Margin="0,12,0,0" Text="DATA PATH"/>
+          <Grid Grid.Row="10" RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="90,*" RowSpacing="8">
+            <TextBlock Text="BUS"/><TextBlock Grid.Column="1" Classes="mono" Foreground="{StaticResource ScpuCyan}" Text="{Binding DataBus}"/>
+            <TextBlock Grid.Row="1" Text="ALU IN"/><TextBlock Grid.Row="1" Grid.Column="1" Classes="mono" Text="{Binding AluOperand}"/>
+            <TextBlock Grid.Row="2" Text="SOURCE"/><TextBlock Grid.Row="2" Grid.Column="1" Classes="mono" Text="{Binding DataSource}" TextWrapping="Wrap"/>
+          </Grid>
+        </Grid>
+        </ScrollViewer>
+        </Grid>
+      </Border>
+      <GridSplitter x:Name="CpuPanelSplitter" Grid.Column="1" Background="{StaticResource ScpuBorder}" ResizeDirection="Columns"/>
+
+      <TabControl x:Name="MainTabs" Grid.Column="2" SelectionChanged="OnMainTabChanged">
+        <TabItem><TabItem.Header><TextBlock Margin="8,0,0,0" Text="ROM"/></TabItem.Header>
+          <Border Classes="toolPanel" Padding="0"><Grid RowDefinitions="Auto,Auto,*">
+            <CheckBox HorizontalAlignment="Right" Margin="12,6,12,0" IsChecked="{Binding FollowProgramCounter}" Content="Follow PC"/>
+            <Grid Grid.Row="1" Background="{StaticResource ScpuRaised}" ColumnDefinitions="32,52,72,230,140,*,170" Margin="12,8">
+              <TextBlock Grid.Column="1" Text="ADDR"/><TextBlock Grid.Column="2" Text="WORD"/><TextBlock Grid.Column="3" Text="INSTRUCTION"/>
+              <TextBlock Grid.Column="4" Text="LABEL"/><TextBlock Grid.Column="5" Text="SOURCE"/><TextBlock Grid.Column="6" Text="LOCATION"/>
+            </Grid>
+            <ListBox x:Name="RomList" Grid.Row="2" ItemsSource="{Binding Rom}" SelectedItem="{Binding SelectedRomRow}" DoubleTapped="OnRomDoubleTapped">
+              <ListBox.ItemTemplate><DataTemplate x:DataType="vm:RomRowViewModel"><Border Padding="12,4">
+                <Border.ContextFlyout><MenuFlyout><MenuItem Header="{Binding BreakpointActionLabel}" Click="OnToggleRomBreakpoint"/></MenuFlyout></Border.ContextFlyout>
+                <Grid ColumnDefinitions="32,52,72,230,140,*,170">
+                  <Button Classes="breakpointGutter" Width="32" Height="24" Padding="0" BorderThickness="0" Background="Transparent"
+                          Click="OnToggleRomBreakpoint" ToolTip.Tip="{Binding BreakpointActionLabel}">
+                    <Grid Width="24" Height="20">
+                      <TextBlock Classes="debuggerMarker breakpointHint" IsVisible="{Binding CanShowBreakpointHint}" Text="&#x25CF;"/>
+                      <TextBlock Classes="debuggerMarker romPcMarker" Classes.breakpoint="{Binding IsBreakpoint}" IsVisible="{Binding IsCurrent}" Text="&#x25B6;"/>
+                      <TextBlock Classes="debuggerMarker breakpointMarker" IsVisible="{Binding ShowBreakpointDot}" Text="&#x25CF;"/>
+                    </Grid>
+                  </Button>
+                  <TextBlock Grid.Column="1" Classes="mono" Foreground="{StaticResource ScpuAmber}" Text="{Binding Address}"/>
+                  <TextBlock Grid.Column="2" Classes="mono" Text="{Binding Word}"/><TextBlock Grid.Column="3" Classes="mono" Classes.dataWord="{Binding IsData}" Text="{Binding Instruction}"/>
+                  <TextBlock Grid.Column="4" Classes="mono" Foreground="{StaticResource ScpuGreen}" Text="{Binding Label}"/>
+                  <TextBlock Grid.Column="5" Classes="mono" Opacity="0.85" Text="{Binding SourceContent}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding SourcePath}"/>
+                  <TextBlock Grid.Column="6" Classes="mono" Opacity="0.65" Text="{Binding SourceLocation}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding SourcePath}"/>
+                </Grid></Border></DataTemplate></ListBox.ItemTemplate>
+            </ListBox>
+          </Grid></Border>
+        </TabItem>
+        <TabItem Header="SOURCE">
+          <Border Classes="toolPanel" Padding="8">
+            <Grid>
+              <TextBlock IsVisible="{Binding !HasSourceDocument}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                         Opacity="0.6" Text="No source document is available for a binary ROM."/>
+              <Grid IsVisible="{Binding HasSourceDocument}">
+                <Grid>
+                  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="{Binding GeneratedInstructionsHeight}"/></Grid.RowDefinitions>
+                  <Grid ColumnDefinitions="*,Auto" Margin="6">
+                    <TextBlock Classes="panelTitle" Text="{Binding AssemblySourceTitle}"/>
+                    <CheckBox Grid.Column="1" IsChecked="{Binding FollowProgramCounter}" Content="Follow PC"/>
+                  </Grid>
+                  <ListBox x:Name="AssemblySourceList" Grid.Row="1" ItemsSource="{Binding AssemblySourceLines}"
+                           SelectedItem="{Binding SelectedAssemblySourceLine}" FontFamily="Cascadia Mono,Consolas,monospace">
+                    <ListBox.ItemTemplate><DataTemplate x:DataType="vm:SourceCodeLineViewModel">
+                      <Grid ColumnDefinitions="32,46,*" MinHeight="24" ToolTip.Tip="{Binding SymbolToolTip}">
+                        <Grid.ContextFlyout><MenuFlyout>
+                          <MenuItem Header="{Binding BreakpointActionLabel}" Click="OnToggleAssemblySourceBreakpoint"/>
+                          <MenuItem Header="{Binding WatchActionLabel}" IsEnabled="{Binding HasWatchTargets}" Click="OnAddSourceWatches"/>
+                        </MenuFlyout></Grid.ContextFlyout>
+                        <Button Width="32" Height="24" Padding="0" BorderThickness="0" Background="Transparent"
+                                Classes="breakpointGutter" Click="OnToggleAssemblySourceBreakpoint" ToolTip.Tip="{Binding BreakpointActionLabel}">
+                          <Grid Width="24" Height="20"><TextBlock Classes="debuggerMarker breakpointHint" IsVisible="{Binding CanShowBreakpointHint}" Text="&#x25CF;"/><TextBlock Classes="debuggerMarker sourcePcMarker" Classes.breakpoint="{Binding IsBreakpoint}" IsVisible="{Binding IsCurrent}" Text="&#x25B6;"/><TextBlock Classes="debuggerMarker breakpointMarker" IsVisible="{Binding ShowBreakpointDot}" Text="&#x25CF;"/></Grid>
+                        </Button>
+                        <TextBlock Grid.Column="1" HorizontalAlignment="Right" Margin="0,0,10,0" Opacity="0.45" Text="{Binding LineNumber}"/>
+                        <ItemsControl Grid.Column="2" ItemsSource="{Binding SyntaxTokens}">
+                          <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:AssemblySyntaxToken">
+                            <TextBlock Text="{Binding Text}" Foreground="{Binding Color}"/>
+                          </DataTemplate></ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </Grid>
+                    </DataTemplate></ListBox.ItemTemplate>
+                  </ListBox>
+
+                  <Border Grid.Row="2" Grid.RowSpan="2" IsVisible="{Binding HasSelectedSourceInstructions}"
+                          Margin="0,6,0,0" Background="{StaticResource ScpuRaised}"
+                          BorderBrush="{StaticResource ScpuBorder}" BorderThickness="1" CornerRadius="3">
+                    <Grid RowDefinitions="Auto,*">
+                      <Border Background="{StaticResource ScpuPanel}" Padding="10,5">
+                        <Grid ColumnDefinitions="*,Auto">
+                          <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Foreground="{StaticResource ScpuCyan}" FontSize="11" VerticalAlignment="Center" Text="&#x25C6;"/>
+                            <TextBlock Classes="panelTitle" VerticalAlignment="Center" Text="MACHINE INSTRUCTIONS FOR SELECTED LINE"/>
+                          </StackPanel>
+                          <Button Grid.Column="1" Classes="dockIconButton" Padding="6,1" Click="OnCloseSourceInstructions"
+                                  ToolTip.Tip="Close instruction details" Content="&#x2715;"/>
+                        </Grid>
+                      </Border>
+                      <ListBox x:Name="SelectedSourceInstructionList" Grid.Row="1" ItemsSource="{Binding SelectedSourceInstructions}" Margin="4,3">
+                        <ListBox.ItemTemplate><DataTemplate x:DataType="vm:RomRowViewModel">
+                          <Grid ColumnDefinitions="24,65,65,220,140,*" MinHeight="22" Margin="4,0">
+                            <TextBlock Classes="debuggerMarker romPcMarker" Classes.breakpoint="{Binding IsBreakpoint}" IsVisible="{Binding IsCurrent}" Text="&#x25B6;"/>
+                            <TextBlock Grid.Column="1" Classes="mono" Foreground="{StaticResource ScpuAmber}" Text="{Binding Address}"/>
+                            <TextBlock Grid.Column="2" Classes="mono" Text="{Binding Word}"/>
+                            <TextBlock Grid.Column="3" Classes="mono" Classes.dataWord="{Binding IsData}" Text="{Binding Instruction}"/>
+                            <TextBlock Grid.Column="4" Foreground="{StaticResource ScpuGreen}" Text="{Binding Label}"/>
+                            <TextBlock Grid.Column="5" Classes="mono" Opacity="0.6" Text="{Binding SourceLocation}"/>
+                          </Grid>
+                        </DataTemplate></ListBox.ItemTemplate>
+                      </ListBox>
+                    </Grid>
+                  </Border>
+                </Grid>
+              </Grid>
+            </Grid>
+          </Border>
+        </TabItem>
+        <TabItem Header="RAM">
+          <Border Classes="toolPanel"><Grid RowDefinitions="Auto,Auto,*"><StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12">
+            <CheckBox IsChecked="{Binding ShowUsedMemoryOnly}" Content="Used memory only"/>
+          </StackPanel>
+            <Grid Grid.Row="1" ColumnDefinitions="75,65,80,45,40,*" Margin="4,8,4,4" Opacity="0.65">
+              <TextBlock Text="ADDRESS"/><TextBlock Grid.Column="1" Text="HEX"/><TextBlock Grid.Column="2" Text="DECIMAL"/>
+              <TextBlock Grid.Column="3" Text="ASCII"/><TextBlock Grid.Column="4" Text="CHG" ToolTip.Tip="Value changed since the previous refresh"/><TextBlock Grid.Column="5" Text="SYMBOL"/>
+            </Grid>
+            <ListBox x:Name="RamList" Grid.Row="2" ItemsSource="{Binding Ram}" SelectedItem="{Binding SelectedRamRow}">
+              <ListBox.ContextFlyout><MenuFlyout><MenuItem Header="{Binding SelectedRamWatchActionLabel}" Click="OnToggleSelectedRamWatch"/></MenuFlyout></ListBox.ContextFlyout>
+              <ListBox.ItemTemplate><DataTemplate x:DataType="vm:MemoryRowViewModel">
+              <Grid ColumnDefinitions="75,65,80,45,24,*" Margin="4"><TextBlock Classes="mono" Foreground="{StaticResource ScpuAmber}" Text="{Binding Address}"/>
+                <TextBlock Grid.Column="1" Classes="mono" Text="{Binding Hex}"/><TextBlock Grid.Column="2" Classes="mono" Text="{Binding Decimal}"/>
+                <TextBlock Grid.Column="3" Classes="mono" Text="{Binding Ascii}"/><TextBlock Grid.Column="4" Foreground="{StaticResource ScpuCyan}" Text="{Binding ChangeMarker}"/>
+                <TextBlock Grid.Column="5" Foreground="{StaticResource ScpuGreen}" Text="{Binding Label}"/></Grid>
+            </DataTemplate></ListBox.ItemTemplate></ListBox>
+          </Grid></Border>
+        </TabItem>
+        <TabItem Header="STACK">
+          <Border Classes="toolPanel"><Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="6">
+            <TextBlock Text="Logical call stack reconstructed from the S-CPU SP and FP conventions." Opacity="0.65"/>
+            <TextBlock Grid.Row="1" Classes="mono" Foreground="{StaticResource ScpuCyan}" Text="{Binding StackStatus}"/>
+            <Grid Grid.Row="2" ColumnDefinitions="80,70,90,50,*" Margin="4,6" Opacity="0.65">
+              <TextBlock Text="ADDRESS"/><TextBlock Grid.Column="1" Text="HEX"/><TextBlock Grid.Column="2" Text="DECIMAL"/>
+              <TextBlock Grid.Column="3" Text="ASCII"/><TextBlock Grid.Column="4" Text="ROLE"/>
+            </Grid>
+            <ListBox Grid.Row="3" ItemsSource="{Binding Stack}"><ListBox.ItemTemplate><DataTemplate x:DataType="vm:MemoryRowViewModel">
+            <Grid ColumnDefinitions="80,70,90,50,*" Margin="4"><TextBlock Classes="mono" Foreground="{StaticResource ScpuAmber}" Text="{Binding Address}"/>
+              <TextBlock Grid.Column="1" Classes="mono" Text="{Binding Hex}"/><TextBlock Grid.Column="2" Classes="mono" Text="{Binding Decimal}"/>
+              <TextBlock Grid.Column="3" Classes="mono" Text="{Binding Ascii}"/><TextBlock Grid.Column="4" Foreground="{StaticResource ScpuGreen}" Text="{Binding Label}"/></Grid>
+          </DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
+        </TabItem>
+        <TabItem Header="WATCHES">
+          <Border Classes="toolPanel"><Grid RowDefinitions="Auto,Auto,*"><StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6" Margin="0,0,0,8">
+            <Button Content="Add address or symbol..." Click="OnAddWatch"/>
+            <Button Command="{Binding RemoveWatchCommand}" Content="Remove selected"/>
+            <Button Command="{Binding ClearWatchesCommand}" Content="Clear all"/>
+          </StackPanel>
+            <Grid Grid.Row="1" ColumnDefinitions="80,70,90,50,*" Margin="4,2,4,6" Opacity="0.65">
+              <TextBlock Text="ADDRESS"/><TextBlock Grid.Column="1" Text="HEX"/><TextBlock Grid.Column="2" Text="DECIMAL"/>
+              <TextBlock Grid.Column="3" Text="ASCII"/><TextBlock Grid.Column="4" Text="SYMBOL"/>
+            </Grid>
+            <ListBox Grid.Row="2" ItemsSource="{Binding Watches}" SelectedItem="{Binding SelectedWatch}"><ListBox.ItemTemplate><DataTemplate x:DataType="vm:WatchRowViewModel">
+              <Grid ColumnDefinitions="80,70,90,50,*" Margin="4"><TextBlock Classes="mono" Foreground="{StaticResource ScpuAmber}" Text="{Binding Address}"/>
+                <TextBlock Grid.Column="1" Classes="mono" Text="{Binding Hex}"/><TextBlock Grid.Column="2" Classes="mono" Text="{Binding Decimal}"/>
+                <TextBlock Grid.Column="3" Classes="mono" Text="{Binding Ascii}"/><TextBlock Grid.Column="4" Text="{Binding Label}"/></Grid>
+            </DataTemplate></ListBox.ItemTemplate></ListBox>
+          </Grid></Border>
+        </TabItem>
+        <TabItem Header="BREAKPOINTS">
+          <Border Classes="toolPanel"><Grid RowDefinitions="Auto,Auto,*"><StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6" Margin="0,0,0,8">
+            <Button Content="Add address or symbol..." Click="OnAddBreakpoint"/><Button Command="{Binding RemoveBreakpointCommand}" Content="Remove selected"/>
+            <Button Command="{Binding ClearBreakpointsCommand}" Content="Clear all"/></StackPanel>
+            <Grid Grid.Row="1" ColumnDefinitions="28,70,240,160,*" Margin="4,2,4,6" Opacity="0.65">
+              <TextBlock Grid.Column="1" Text="ADDRESS"/><TextBlock Grid.Column="2" Text="INSTRUCTION"/>
+              <TextBlock Grid.Column="3" Text="LABEL"/><TextBlock Grid.Column="4" Text="STATUS"/>
+            </Grid>
+            <ListBox Grid.Row="2" ItemsSource="{Binding Breakpoints}" SelectedItem="{Binding SelectedBreakpoint}" DoubleTapped="OnBreakpointDoubleTapped"><ListBox.ItemTemplate><DataTemplate x:DataType="vm:BreakpointRowViewModel">
+              <Grid ColumnDefinitions="28,70,240,160,*" MinHeight="24" Margin="4">
+                <TextBlock Classes="debuggerMarker breakpointMarker" IsVisible="{Binding IsCurrentStop}" Text="&#x25B6;" ToolTip.Tip="Execution stopped at this breakpoint"/>
+                <TextBlock Grid.Column="1" Classes="mono" Foreground="{StaticResource ScpuAmber}" Text="{Binding Address}"/>
+                <TextBlock Grid.Column="2" Classes="mono" Text="{Binding Instruction}"/><TextBlock Grid.Column="3" Foreground="{StaticResource ScpuGreen}" Text="{Binding Label}"/>
+                <TextBlock Grid.Column="4" Foreground="#F0525F" IsVisible="{Binding IsCurrentStop}" Text="Stopped here"/>
+              </Grid>
+            </DataTemplate></ListBox.ItemTemplate></ListBox>
+          </Grid></Border>
+        </TabItem>
+        <TabItem Header="SYMBOLS">
+          <Border Classes="toolPanel"><ListBox ItemsSource="{Binding Symbols}" DoubleTapped="OnSymbolDoubleTapped"><ListBox.ItemTemplate><DataTemplate x:DataType="vm:SymbolRowViewModel">
+            <Grid ColumnDefinitions="220,80,80,*" Margin="4"><TextBlock Classes="mono" Foreground="{StaticResource ScpuGreen}" Text="{Binding Name}"/>
+              <TextBlock Grid.Column="1" Classes="mono" Text="{Binding Address}"/><TextBlock Grid.Column="2" Foreground="{StaticResource ScpuCyan}" Text="{Binding Region}"/>
+              <TextBlock Grid.Column="3" Classes="mono" Text="{Binding DisplayValue}"/></Grid>
+          </DataTemplate></ListBox.ItemTemplate></ListBox></Border>
+        </TabItem>
+      </TabControl>
+
+      <GridSplitter x:Name="BottomPanelSplitter" Grid.Row="1" Grid.ColumnSpan="3" Background="{StaticResource ScpuBorder}" ResizeDirection="Rows"/>
+      <Grid x:Name="BottomPanelHost" Grid.Row="2" Grid.ColumnSpan="3">
+      <TabControl x:Name="BottomTabs" IsVisible="{Binding IsBottomPanelExpanded}" SelectionChanged="OnBottomTabChanged">
+        <TabItem><TabItem.Header><TextBlock Margin="8,0,0,0" Text="I/O DEVICES"/></TabItem.Header>
+          <Border Classes="toolPanel bottomToolPanel"><Grid ColumnDefinitions="*,300" ColumnSpacing="16">
+            <Border x:Name="TerminalSurface" Focusable="True" KeyDown="OnTerminalKeyDown" PointerPressed="OnTerminalPointerPressed"
+                    GotFocus="OnTerminalGotFocus" LostFocus="OnTerminalLostFocus"
+                    Background="#0B1420" BorderBrush="{StaticResource ScpuBorder}" BorderThickness="1" CornerRadius="3" Padding="12">
+              <Grid RowDefinitions="Auto,*,Auto"><Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8"><TextBlock Classes="panelTitle" Text="DEVICE 1 · TERMINAL"/>
+                <Button Grid.Column="1" Padding="7,2" Command="{Binding ClearTerminalCommand}" Content="Clear output" ToolTip.Tip="Clear displayed output without changing pending keyboard input"/>
+                <Border x:Name="TerminalFocusBadge" Grid.Column="2" IsVisible="False" Background="{StaticResource ScpuCyan}" CornerRadius="3" Padding="7,2"><TextBlock Foreground="#081018" FontSize="11" FontWeight="Bold" Text="KEYBOARD FOCUS"/></Border></Grid>
+                <ScrollViewer x:Name="TerminalScrollViewer" Grid.Row="1"><TextBlock Classes="mono" Foreground="{StaticResource ScpuGreen}" Text="{Binding TerminalOutput}" TextWrapping="Wrap"/></ScrollViewer>
+                <StackPanel Grid.Row="2" Orientation="Horizontal"><TextBlock x:Name="TerminalCursor" IsVisible="False" Classes="mono" Foreground="{StaticResource ScpuCyan}" Text="▌"/>
+                  <TextBlock Margin="8,0,0,0" Opacity="0.5" Text="Click terminal to capture keyboard input"/></StackPanel>
+              </Grid>
+            </Border>
+            <Border Grid.Column="1" Background="{StaticResource ScpuRaised}" CornerRadius="3" Padding="12"><Grid RowDefinitions="Auto,*,Auto" RowSpacing="6">
+              <TextBlock Classes="panelTitle" Text="DEVICE 0 · DEMO OUTPUT"/>
+              <Grid Grid.Row="1" RowDefinitions="Auto,*"><Grid ColumnDefinitions="*,Auto"><TextBlock Opacity="0.7" Text="16-BIT DISPLAY · 0x12801"/><TextBlock Grid.Column="1" Classes="mono" Foreground="{StaticResource ScpuAmber}" Text="{Binding Display1}"/></Grid>
+                <controls:SevenSegmentDisplay Grid.Row="1" MinHeight="46" MaxHeight="66" Value="{Binding Display1Value}"/></Grid>
+              <StackPanel Grid.Row="2"><Grid ColumnDefinitions="*,Auto"><TextBlock VerticalAlignment="Center" Opacity="0.7" Text="8-BIT LED BANK · 0x12802"/>
+                <TextBlock Grid.Column="1" Classes="mono" Foreground="{StaticResource ScpuAmber}" Text="{Binding LedValue}"/>
+                </Grid><ItemsControl HorizontalAlignment="Center" ItemsSource="{Binding LedIndicators}"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="5"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:LedIndicatorViewModel"><StackPanel Width="25"><controls:LedIndicator Width="18" Height="18" HorizontalAlignment="Center" IsOn="{Binding IsOn}" ToolTip.Tip="{Binding State}"/>
+                    <TextBlock HorizontalAlignment="Center" FontSize="9" Opacity="0.55" Text="{Binding Index}"/></StackPanel></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+              </StackPanel>
+            </Grid></Border>
+          </Grid></Border>
+        </TabItem>
+        <TabItem Header="DIAGNOSTICS">
+          <Border Classes="toolPanel bottomToolPanel"><ListBox x:Name="DiagnosticsList" ItemsSource="{Binding Logs}"><ListBox.ItemTemplate><DataTemplate x:DataType="infrastructure:UiLogEntry">
+            <Grid ColumnDefinitions="105,65,170,*" Margin="3"><TextBlock Classes="mono" Opacity="0.65" Text="{Binding Time}"/>
+              <TextBlock Grid.Column="1" Classes="mono" Foreground="{StaticResource ScpuAmber}" Text="{Binding Severity}"/>
+              <TextBlock Grid.Column="2" Foreground="{StaticResource ScpuCyan}" Text="{Binding Source}"/>
+              <TextBlock Grid.Column="3" Classes="mono" Text="{Binding Message}" TextWrapping="NoWrap"/></Grid>
+          </DataTemplate></ListBox.ItemTemplate></ListBox></Border>
+        </TabItem>
+      </TabControl>
+      <Button Classes="toolWindowChevron" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,8,0" Width="24" Height="24"
+              IsVisible="{Binding IsBottomPanelExpanded}" Command="{Binding ToggleBottomPanelCommand}" Content="&#x25BC;" ToolTip.Tip="Collapse I/O and diagnostics panel"/>
+      <Grid IsVisible="{Binding !IsBottomPanelExpanded}" ColumnDefinitions="Auto,Auto,*,Auto">
+        <Button Classes="toolWindowTab" Padding="10,3" Content="I/O DEVICES" Tag="0" Click="OnCollapsedBottomTabClick"/>
+        <Button Grid.Column="1" Classes="toolWindowTab" Padding="10,3" Content="DIAGNOSTICS" Tag="1" Click="OnCollapsedBottomTabClick"/>
+        <Button Grid.Column="3" Classes="toolWindowChevron" Margin="0,0,8,0" Width="24" Height="24"
+                Command="{Binding ToggleBottomPanelCommand}" Content="&#x25B2;" ToolTip.Tip="Expand I/O and diagnostics panel"/>
+      </Grid>
+      </Grid>
+    </Grid>
+
+    <Border Grid.Row="3" Background="{StaticResource ScpuRaised}" Padding="10,4">
+      <Grid>
+        <TextBlock VerticalAlignment="Center" Classes="mono" Text="{Binding Status}"
+                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Status}"/>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

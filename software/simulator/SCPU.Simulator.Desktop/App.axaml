@@ -1,0 +1,20 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SCPU.Simulator.Desktop.App"
+             RequestedThemeVariant="Dark">
+  <Application.Resources>
+    <!-- Keep interactive controls on the S-CPU palette instead of inheriting
+         the Windows accent color. Red remains reserved for debugger stops. -->
+    <Color x:Key="SystemAccentColor">#39D5E8</Color>
+    <Color x:Key="SystemAccentColorLight1">#62DEEB</Color>
+    <Color x:Key="SystemAccentColorLight2">#8BE7F1</Color>
+    <Color x:Key="SystemAccentColorLight3">#B4F1F6</Color>
+    <Color x:Key="SystemAccentColorDark1">#2EB4C5</Color>
+    <Color x:Key="SystemAccentColorDark2">#248F9D</Color>
+    <Color x:Key="SystemAccentColorDark3">#196A75</Color>
+  </Application.Resources>
+  <Application.Styles>
+    <FluentTheme DensityStyle="Compact"/>
+    <StyleInclude Source="avares://SCPU.Simulator.Desktop/Themes/SCPUTheme.axaml"/>
+  </Application.Styles>
+</Application>

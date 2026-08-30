@@ -1,0 +1,9 @@
+# --- Icarus / Verilator artefacts ---
+*.vvp
+*.vcd
+*.lxt
+*.fst
+*.gtkw
+
+# Output folders
+out/

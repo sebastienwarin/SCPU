@@ -1,0 +1,75 @@
+// =============================================================================
+// S-CODE SAMPLE - STRING MANIPULATION
+// =============================================================================
+// What it does:
+//   Manipulates strings with and without the core/String helpers.
+// Expected result:
+//   The terminal prints manual and library lengths, a compare result, and
+//   numeric checks from string indexing and pointer dereference.
+// Runs on:
+//   Desktop/CLI simulators and S-CPU targets exposing the device-1 TTY.
+// Demonstrates:
+//   String indexing, char* traversal, pointer arithmetic, strlen/strcmp,
+//   and implicit string<->char* usage.
+// =============================================================================
+
+#include "core/Print"
+#include "core/String"
+#include "drivers/TTY"
+
+int strlenManual(string text)
+{
+  char* p = text;
+  int start = p;
+  while (*p != '\0') {
+    p++;
+  }
+  return p - start;
+}
+
+bool startsWith(string text, char expected)
+{
+  return (*text == expected);
+}
+
+void main()
+{
+  const string greeting = "Hello S-CPU";
+
+  // Without core/String: manual pointer walk.
+  int manualLen = strlenManual(greeting);
+
+  // With core/String helpers.
+  int libLen = strlen(greeting);
+  bool sameText = strcmp(greeting, "Hello S-CPU");
+
+  Print("manual len = ");
+  PrintNumber(manualLen);
+  Print("\nlib len = ");
+  PrintNumber(libLen);
+  Print("\nstrcmp = ");
+  PrintNumber(sameText ? 1 : 0);
+
+  // string -> char* (implicit), then pointer arithmetic.
+  char* p = greeting;
+  p++;
+  string tail = p; // char* -> string (implicit)
+  Print("\ntail = ");
+  Print(tail);
+
+  // Indexing reads character codes.
+  Print("\nchars(H,e) = ");
+  PrintNumber((int)greeting[0]);
+  Print(",");
+  PrintNumber((int)greeting[1]);
+
+  // Pointer dereference after one increment should match 'e' (101).
+  Print("\n*tail = ");
+  PrintChar(*tail);
+
+  Print("\nstartsWith(H) = ");
+  PrintNumber(startsWith(greeting, 'H') ? 1 : 0);
+  Print("\n");
+}
+
+main();
