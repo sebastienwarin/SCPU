@@ -10,10 +10,20 @@
   <em>A minimalist 16-bit computer built from logic gates to code.</em>
 </p>
 
-[![Latest Release](https://img.shields.io/github/v/release/sebastienwarin/SCPU?label=release)](https://github.com/sebastienwarin/SCPU/releases/latest)
-[![Build](https://github.com/sebastienwarin/SCPU/actions/workflows/ci.yml/badge.svg)](https://github.com/sebastienwarin/SCPU/actions/workflows/ci.yml)
-[![License](https://img.shields.io/github/license/sebastienwarin/SCPU)](LICENSE)
-[![Documentation](https://img.shields.io/badge/docs-buildacpu.com-blue)](https://buildacpu.com)
+<p align="center">
+  <a href="https://github.com/sebastienwarin/SCPU/releases/latest">
+    <img src="https://img.shields.io/github/v/release/sebastienwarin/SCPU?label=release" alt="Latest Release">
+  </a>
+  <a href="https://github.com/sebastienwarin/SCPU/actions/workflows/ci.yml">
+    <img src="https://github.com/sebastienwarin/SCPU/actions/workflows/ci.yml/badge.svg" alt="Build">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/github/license/sebastienwarin/SCPU" alt="License">
+  </a>
+  <a href="https://buildacpu.com">
+    <img src="https://img.shields.io/badge/docs-buildacpu.com-blue" alt="Documentation">
+  </a>
+</p>
 
 **S-CPU** is a **hands-on educational computer project** and a personal journey
 into how computers work, connecting **digital logic**, **processor architecture**,
