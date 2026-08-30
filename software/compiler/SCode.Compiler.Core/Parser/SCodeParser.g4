@@ -37,7 +37,7 @@ includeDeclaration: SHARP INCLUDE LITERAL_STRING;
 assemblyConstantDeclaration: SHARP CONST baseType identifier '=' conditionalExpression;
 
 // Variable declarations
-variableDeclaration: CONST? STATIC? type variableDeclarators;
+variableDeclaration: EXTERN? CONST? STATIC? type variableDeclarators;
 variableDeclarators: variableDeclarator (',' variableDeclarator)*;
 variableDeclarator: identifier (arraySpecifier)? ('=' variableInitializer)?;
 arraySpecifier: '[' LITERAL_INT? (',' LITERAL_INT?)* ']';

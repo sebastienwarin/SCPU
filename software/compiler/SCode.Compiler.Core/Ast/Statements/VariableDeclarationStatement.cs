@@ -6,6 +6,7 @@ namespace SCode.Compiler.Ast.Statements
     {
         public bool IsConst { get; set; }
         public bool IsStatic { get; set; }
+        public bool IsExtern { get; set; }
 
         [ChildNode]
         public TypeDescriptor Type { get; set; }
@@ -15,7 +16,7 @@ namespace SCode.Compiler.Ast.Statements
 
         public override string ToString()
         {
-            return $"Declare{(IsStatic ? " Static" : "")} {(IsConst ? "Constant" : "Variable")} {Type} {string.Join(", ", Variables.Select(c => c.ToString()))}";
+            return $"Declare{(IsExtern ? " Extern" : "")}{(IsStatic ? " Static" : "")} {(IsConst ? "Constant" : "Variable")} {Type} {string.Join(", ", Variables.Select(c => c.ToString()))}";
         }
     }
 }

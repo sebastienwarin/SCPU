@@ -67,6 +67,7 @@ namespace SCode.Compiler.Ast
                 Source = SourceRange.FromParserContext(context),
                 IsConst = context.CONST() != null,
                 IsStatic = context.STATIC() != null,
+                IsExtern = context.EXTERN() != null,
                 Type = VisitType(context.type()),
                 Variables = VisitVariableDeclarators(context.variableDeclarators())
             };

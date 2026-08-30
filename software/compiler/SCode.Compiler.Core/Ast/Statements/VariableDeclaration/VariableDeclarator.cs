@@ -29,6 +29,13 @@ namespace SCode.Compiler.Ast.Statements.VariableDeclaration
 
         protected override void OnPrepare()
         {
+            // Extern declarations follow their own rules
+            if (Declaration.IsExtern)
+            {
+                PrepareExtern();
+                return;
+            }
+
             // Reserve identifier & check type
             if (!CurrentScope.RegisterIdentifier(Identifier,
                 Declaration.IsConst ? IdentifierInfo.IdentifierType.Constant : IdentifierInfo.IdentifierType.Variable,
@@ -94,10 +101,51 @@ namespace SCode.Compiler.Ast.Statements.VariableDeclaration
             }
         }
 
+        private void PrepareExtern()
+        {
+            if (Declaration.IsConst || Declaration.IsStatic)
+            {
+                throw RaiseError($"The extern variable '{Identifier}' cannot be declared as const or static.");
+            }
+            else if (FunctionDeclaration != null)
+            {
+                throw RaiseError($"The extern variable '{Identifier}' must be declared in the global scope.");
+            }
+            else if (Initializer != null)
+            {
+                throw RaiseError($"The extern variable '{Identifier}' cannot be initialized.");
+            }
+            else if (IsArray)
+            {
+                throw RaiseError($"The extern variable '{Identifier}' cannot be an array.");
+            }
+
+            // An identical extern declaration may be repeated across included files
+            if (CurrentScope.TryGetIdentifier(Identifier, out var existing))
+            {
+                if (existing.SourceNode is VariableDeclarator declarator &&
+                    declarator.Declaration.IsExtern &&
+                    (TypeInfo)declarator.Declaration.Type == (TypeInfo)Declaration.Type)
+                {
+                    return;
+                }
+
+                throw RaiseError($"The variable '{Identifier}' is already defined in the current scope.");
+            }
+
+            if (!CurrentScope.RegisterIdentifier(Identifier, IdentifierInfo.IdentifierType.Variable, Declaration.Type, this))
+            {
+                throw RaiseError($"The variable '{Identifier}' is already defined in the current scope.");
+            }
+        }
+
         protected override void OnBuild()
         {
             var builder = Context.InstructionBuilder;
             int totalSize = GetTotalSize();
+
+            // An extern variable is defined outside of the S-Code program : nothing to reserve nor initialize
+            if (Declaration.IsExtern) return;
 
             if (!CurrentScope.TryGetIdentifier(Identifier, out var identifierInfo))
             {

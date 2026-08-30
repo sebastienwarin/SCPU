@@ -137,6 +137,7 @@ int a;                 // Declaration only
 int b = 42;            // Declaration with initialization
 const int Max = 100;   // Read-only variable
 static int Counter = 0;// Persistent variable across calls
+extern int SYMBOL;     // Symbol defined outside S-Code (assembly)
 ```
 
 #### `const` variables
@@ -171,6 +172,47 @@ void Increment() {
 ```
 
 This guarantees single-time initialization and lifetime persistence while keeping the variable scoped locally to its definition.
+
+#### `extern` variables
+
+* Declared with the `extern` modifier before the type, like `extern` functions (see [3.5](#external-functions)).
+* Declare a symbol that is **defined outside S-Code** — typically a label or a `#const` coming from an included assembly file, or a built-in symbol emitted by the compiler.
+* **No RAM is reserved** and **no initialization code is emitted**: the symbol is only registered in the symbol table so that the assembler resolves it.
+* Must be declared in the **global scope**, cannot be `const`, `static`, an array, and cannot have an initializer.
+* Repeating an identical `extern` declaration is allowed (handy when several included files declare the same symbol).
+
+```C
+#include "../asm/common/Buffer.asm"
+
+extern int RX_BUFFER;      // label defined in Buffer.asm
+
+int* rx = &RX_BUFFER;      // address of the symbol
+*rx = 0;                   // write through the pointer
+```
+
+⚠️ `&SYMBOL` yields the **address** of the symbol, while `SYMBOL` reads the **word stored at that address**.
+If the assembler cannot resolve the symbol, the error is reported during the assembly phase, not at compile time.
+
+#### Scoping and shadowing
+
+Identifiers are resolved from the **innermost scope outwards**: the current block, then each enclosing block, then the function, then the global scope.
+
+* A local declaration always **shadows** an enclosing one, regardless of the order of declarations in the file.
+  A global variable declared *after* a function never affects a local of the same name inside that function.
+* Two declarations of the same name **in the same scope** are an error.
+* `for` loop variables are **not** scoped to the loop: they belong to the enclosing block.
+  Two sibling `for` loops in the same block cannot reuse the same variable name.
+* A local variable cannot shadow a **parameter** of the enclosing function.
+
+```C
+void fill(int* dst, int count) {
+  for (int i = 0; i < count; i++) {  // 'i' is local to fill()
+    *(dst + i) = i;
+  }
+}
+
+int i = 99;                          // global 'i', unrelated to the one above
+```
 
 #### Arrays
 
@@ -541,6 +583,8 @@ extern void delay(int ms);
 
 Declared functions are registered in the symbol table but **no code is emitted**.
 The assembler provides the actual implementation.
+
+Variables can be declared `extern` the same way — see [3.2 / `extern` variables](#extern-variables).
 
 Example:
 
