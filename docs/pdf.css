@@ -132,6 +132,12 @@ img {
     margin: 12px auto;
 }
 
+/* Keep repository status badges on GitHub, but omit their release/workflow
+   state from the versioned PDF. */
+.pdf-exclude {
+    display: none;
+}
+
 /* The overview contains large screenshots surrounded by short command
    examples. A slightly smaller size prevents an image becoming an orphan. */
 .pdf-overview img:not([alt="BuildACPU"]) {

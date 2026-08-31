@@ -10,7 +10,7 @@
   <em>A minimalist 16-bit computer built from logic gates to code.</em>
 </p>
 
-<p align="center">
+<p align="center" class="pdf-exclude">
   <a href="https://github.com/sebastienwarin/SCPU/releases/latest">
     <img src="https://img.shields.io/github/v/release/sebastienwarin/SCPU?label=release" alt="Latest Release">
   </a>
