@@ -14,15 +14,16 @@
         /// </summary>
         private static readonly ConversionType[,] TypeConversion = new ConversionType[,]
         {
-            //            To:   Empty                 Int                       Char                        Decimal                     Long                        Bool                        String                      Custom           
-            /* From Empty   */ { ConversionType.None, ConversionType.None,      ConversionType.None,        ConversionType.None,        ConversionType.None,        ConversionType.None,        ConversionType.None,        ConversionType.None },
-            /* From Int     */ { ConversionType.None, ConversionType.Implicit,  ConversionType.Explicit,    ConversionType.Implicit,    ConversionType.Implicit,    ConversionType.Explicit,    ConversionType.None,        ConversionType.None },
-            /* From Char    */ { ConversionType.None, ConversionType.Implicit,  ConversionType.Implicit,    ConversionType.Implicit,    ConversionType.Implicit,    ConversionType.None,        ConversionType.Explicit,    ConversionType.None },
-            /* From Decimal */ { ConversionType.None, ConversionType.Explicit,  ConversionType.Explicit,    ConversionType.Implicit,    ConversionType.Explicit,    ConversionType.Explicit,    ConversionType.Explicit,    ConversionType.None },
-            /* From Long    */ { ConversionType.None, ConversionType.Explicit,  ConversionType.Explicit,    ConversionType.Explicit,    ConversionType.Implicit,    ConversionType.Explicit,    ConversionType.Explicit,    ConversionType.None },
-            /* From Bool    */ { ConversionType.None, ConversionType.Implicit,  ConversionType.Explicit,    ConversionType.Implicit,    ConversionType.Implicit,    ConversionType.Implicit,    ConversionType.Explicit,    ConversionType.None },
-            /* From String  */ { ConversionType.None, ConversionType.Explicit,  ConversionType.Explicit,    ConversionType.Explicit,    ConversionType.Explicit,    ConversionType.Explicit,    ConversionType.Implicit,    ConversionType.None },
-            /* From Custom  */ { ConversionType.None, ConversionType.None,      ConversionType.None,        ConversionType.None,        ConversionType.None,        ConversionType.None,        ConversionType.None,        ConversionType.None },
+            //            To:   Empty  Int      UInt     Char     Decimal  Long     Bool     String   Custom
+            /* From Empty   */ { ConversionType.None, ConversionType.None,     ConversionType.None,     ConversionType.None,     ConversionType.None,     ConversionType.None,     ConversionType.None,     ConversionType.None,     ConversionType.None },
+            /* From Int     */ { ConversionType.None, ConversionType.Implicit, ConversionType.Implicit, ConversionType.Explicit, ConversionType.Implicit, ConversionType.Implicit, ConversionType.Explicit, ConversionType.None,     ConversionType.None },
+            /* From UInt    */ { ConversionType.None, ConversionType.Implicit, ConversionType.Implicit, ConversionType.Explicit, ConversionType.Implicit, ConversionType.Implicit, ConversionType.Explicit, ConversionType.None,     ConversionType.None },
+            /* From Char    */ { ConversionType.None, ConversionType.Implicit, ConversionType.Implicit, ConversionType.Implicit, ConversionType.Implicit, ConversionType.Implicit, ConversionType.None,     ConversionType.Explicit, ConversionType.None },
+            /* From Decimal */ { ConversionType.None, ConversionType.Explicit, ConversionType.Explicit, ConversionType.Explicit, ConversionType.Implicit, ConversionType.Explicit, ConversionType.Explicit, ConversionType.Explicit, ConversionType.None },
+            /* From Long    */ { ConversionType.None, ConversionType.Explicit, ConversionType.Explicit, ConversionType.Explicit, ConversionType.Explicit, ConversionType.Implicit, ConversionType.Explicit, ConversionType.Explicit, ConversionType.None },
+            /* From Bool    */ { ConversionType.None, ConversionType.Implicit, ConversionType.Implicit, ConversionType.Explicit, ConversionType.Implicit, ConversionType.Implicit, ConversionType.Implicit, ConversionType.Explicit, ConversionType.None },
+            /* From String  */ { ConversionType.None, ConversionType.Explicit, ConversionType.Explicit, ConversionType.Explicit, ConversionType.Explicit, ConversionType.Explicit, ConversionType.Explicit, ConversionType.Implicit, ConversionType.None },
+            /* From Custom  */ { ConversionType.None, ConversionType.None,     ConversionType.None,     ConversionType.None,     ConversionType.None,     ConversionType.None,     ConversionType.None,     ConversionType.None,     ConversionType.None },
         };
 
         /// <summary>
@@ -31,15 +32,16 @@
         /// </summary>
         private static readonly SCodeType?[,] ResultTypes = new SCodeType?[,]
         {
-            //          Right:   Empty   Int                Char                Decimal              Long               Bool             String            Custom
-            /* Left: Empty   */ { null,  null,              null,               null,               null,               null,            null,              null             },
-            /* Left: Int     */ { null,  SCodeType.Int,     SCodeType.Int,      SCodeType.Decimal,  SCodeType.Long,     null,            null,              null             },
-            /* Left: Char    */ { null,  SCodeType.Int,     SCodeType.Char,     SCodeType.Decimal,  SCodeType.Long,     null,            null,              null             },
-            /* Left: Decimal */ { null,  SCodeType.Decimal, SCodeType.Decimal,  SCodeType.Decimal,  SCodeType.Decimal,  null,            null,              null             },
-            /* Left: Long    */ { null,  SCodeType.Long,    SCodeType.Long,     SCodeType.Decimal,  SCodeType.Long,     null,            null,              null             },
-            /* Left: Bool    */ { null,  null,              null,               null,               null,               SCodeType.Bool,  null,              null             },
-            /* Left: String  */ { null,  null,              null,               null,               null,               null,            SCodeType.String,  null             },
-            /* Left: Custom  */ { null,  null,              null,               null,               null,               null,            null,              SCodeType.Custom },
+            //          Right:   Empty  Int                UInt               Char               Decimal            Long               Bool             String             Custom
+            /* Left: Empty   */ { null,  null,              null,              null,              null,              null,              null,            null,              null             },
+            /* Left: Int     */ { null,  SCodeType.Int,     SCodeType.Int,     SCodeType.Int,     SCodeType.Decimal, SCodeType.Long,    null,            null,              null             },
+            /* Left: UInt    */ { null,  SCodeType.Int,     SCodeType.UInt,    SCodeType.UInt,    SCodeType.Decimal, SCodeType.Long,    null,            null,              null             },
+            /* Left: Char    */ { null,  SCodeType.Int,     SCodeType.UInt,    SCodeType.Char,    SCodeType.Decimal, SCodeType.Long,    null,            null,              null             },
+            /* Left: Decimal */ { null,  SCodeType.Decimal, SCodeType.Decimal, SCodeType.Decimal, SCodeType.Decimal, SCodeType.Decimal, null,            null,              null             },
+            /* Left: Long    */ { null,  SCodeType.Long,    SCodeType.Long,    SCodeType.Long,    SCodeType.Decimal, SCodeType.Long,    null,            null,              null             },
+            /* Left: Bool    */ { null,  null,              null,              null,              null,              null,              SCodeType.Bool,  null,              null             },
+            /* Left: String  */ { null,  null,              null,              null,              null,              null,              null,            SCodeType.String,  null             },
+            /* Left: Custom  */ { null,  null,              null,              null,              null,              null,              null,            null,              SCodeType.Custom },
         };
 
         /// <summary>
@@ -90,8 +92,8 @@
                 resultType = TypeInfo.FromTypeCode(resultTypeCode.Value);
                 return true;
             }
-            else if ((right.TypeCode == SCodeType.Int && (left.IsPointer || left.TypeCode == SCodeType.String)) ||
-                    (left.TypeCode == SCodeType.Int && (right.IsPointer || right.TypeCode == SCodeType.String)))
+            else if (((right.TypeCode == SCodeType.Int || right.TypeCode == SCodeType.UInt) && (left.IsPointer || left.TypeCode == SCodeType.String)) ||
+                    ((left.TypeCode == SCodeType.Int || left.TypeCode == SCodeType.UInt) && (right.IsPointer || right.TypeCode == SCodeType.String)))
             {
                 resultType = TypeInfo.Int;
                 return true;

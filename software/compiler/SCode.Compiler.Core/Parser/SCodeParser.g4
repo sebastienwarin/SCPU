@@ -10,7 +10,8 @@ program: statement* EOF;
 
 // Types
 customTypeName: identifier;
-baseType: LONG | INT | DECIMAL | BOOL | CHAR | STRING;
+integerType: LONG | UINT | INT;
+baseType: integerType | DECIMAL | BOOL | CHAR | STRING;
 type: (baseType|customTypeName) '*'*;
 
 // Statements
@@ -96,7 +97,7 @@ ifBody
   | simpleEmbeddedStatement
   ;
 
-forInitializer: 'int'? identifier '=' expression;
+forInitializer: integerType? identifier '=' expression;
 forIterator: expression; // (',' expression)*
 
 switchSection: switchLabel+ statementList;

@@ -7,6 +7,7 @@ namespace SCode.Compiler.Type
     {
         public static readonly TypeInfo Empty = new() { Name = "Void" };
         public static readonly TypeInfo Int = FromTypeCode(SCodeType.Int);
+        public static readonly TypeInfo UInt = FromTypeCode(SCodeType.UInt);
         public static readonly TypeInfo Char = FromTypeCode(SCodeType.Char);
         public static readonly TypeInfo Decimal = FromTypeCode(SCodeType.Decimal);
         public static readonly TypeInfo Long = FromTypeCode(SCodeType.Long);
@@ -60,12 +61,13 @@ namespace SCode.Compiler.Type
         {
             return typeCode switch
             {
-                SCodeType.Int => new TypeInfo { Name = "Int", IsBaseType = true },
-                SCodeType.Char => new TypeInfo { Name = "Char", IsBaseType = true },
-                SCodeType.Decimal => new TypeInfo { Name = "Decimal", IsBaseType = true },
-                SCodeType.Long => new TypeInfo { Name = "Long", IsBaseType = true },
-                SCodeType.Bool => new TypeInfo { Name = "Bool", IsBaseType = true },
-                SCodeType.String => new TypeInfo { Name = "String", IsBaseType = true },
+                SCodeType.Int => new TypeInfo { Name = nameof(SCodeType.Int), IsBaseType = true },
+                SCodeType.UInt => new TypeInfo { Name = nameof(SCodeType.UInt), IsBaseType = true },
+                SCodeType.Char => new TypeInfo { Name = nameof(SCodeType.Char), IsBaseType = true },
+                SCodeType.Decimal => new TypeInfo { Name = nameof(SCodeType.Decimal), IsBaseType = true },
+                SCodeType.Long => new TypeInfo { Name = nameof(SCodeType.Long), IsBaseType = true },
+                SCodeType.Bool => new TypeInfo { Name = nameof(SCodeType.Bool), IsBaseType = true },
+                SCodeType.String => new TypeInfo { Name = nameof(SCodeType.String), IsBaseType = true },
                 _ => throw new NotSupportedException(),
             };
         }
@@ -82,6 +84,8 @@ namespace SCode.Compiler.Type
                 "void" => SCodeType.Empty,
                 "int" => SCodeType.Int,
                 "int16" => SCodeType.Int,
+                "uint" => SCodeType.UInt,
+                "uint16" => SCodeType.UInt,
                 "long" => SCodeType.Long,
                 "int32" => SCodeType.Long,
                 "char" => SCodeType.Char,

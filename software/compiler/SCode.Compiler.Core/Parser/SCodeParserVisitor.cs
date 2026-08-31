@@ -44,6 +44,12 @@ public interface ISCodeParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitCustomTypeName([NotNull] SCodeParser.CustomTypeNameContext context);
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="SCodeParser.integerType"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitIntegerType([NotNull] SCodeParser.IntegerTypeContext context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="SCodeParser.baseType"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>

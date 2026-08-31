@@ -5,7 +5,7 @@ namespace SCode.Compiler.Tests
     public class ControlFlowTests
     {
         [Theory]
-        [InlineData(-1, 1, Skip = "Signed integer not supported")]
+        [InlineData(-1, 1)]
         [InlineData(0, 1)]
         [InlineData(2, 2)]
         public async Task IfElse_BranchesAreSelected(int x, int expected)
@@ -198,7 +198,7 @@ namespace SCode.Compiler.Tests
 
         [Theory]
         [InlineData(5, 10)]
-        [InlineData(-2, 20, Skip = "Signed integer not supported")]
+        [InlineData(-2, 20)]
         public async Task Ternary_Basic(int x, int expected)
         {
             await SCodeRunner.ExecuteCodeAsync($@"
@@ -210,7 +210,7 @@ namespace SCode.Compiler.Tests
 
         [Theory]
         [InlineData(5, 42)]
-        [InlineData(-1, 24, Skip = "Signed integer not supported")]
+        [InlineData(-1, 24)]
         public async Task Ternary_NestedAndShortCircuit(int x, int expected)
         {
             // Ensures only the chosen branch executes (side-effect counters differ).

@@ -15,7 +15,7 @@ namespace SCode.Compiler.Ast.Expressions.Unary
             PrepareChildren();
             if (Target is Expression expression && !TypeHelper.CanConvert(expression.GetResultType(), TypeInfo.Int))
             {
-                throw RaiseError($"Increment (++) and decrement (--) operators require a type implicitly convertible to 'int'.");
+                throw RaiseError($"Increment (++) and decrement (--) operators require a type convertible to 'int'.");
             }
             else if (Target is IdentifierExpression identifierExpression &&
                     CurrentScope.TryGetIdentifier(identifierExpression.Identifier, out _identifierInfo) &&

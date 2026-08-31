@@ -21,7 +21,7 @@ The S-Code compiler is organized into three main projects:
 
 * **SCode.Compiler.Tests**
   Unit tests built with **xUnit**, ensuring correctness of parsing, semantic rules, and code generation.
-  The test suite includes **250+ unit tests** covering control flow, function calls, expressions, scoping, and error handling.
+  The test suite includes **260+ unit tests** covering control flow, function calls, expressions, scoping, and error handling.
 
 ## 2. CLI Usage
 
@@ -117,7 +117,8 @@ S-Code supports several primitive types, all stored in **16-bit word memory** by
 
 | Type      | Description                                                      |
 | --------- | ---------------------------------------------------------------- |
-| `int`     | 16-bit **unsigned integer** (signed integers not yet supported)  |
+| `int`     | 16-bit **signed integer** (`-32768` to `32767`)                  |
+| `uint`    | 16-bit **unsigned integer** (`0` to `65535`)                    |
 | `bool`    | Alias of `int` – `0` = false, any non-zero = true                |
 | `char`    | 8-bit character stored in a 16-bit word                          |
 | `string`  | Pointer to a null-terminated sequence of `char`                  |
@@ -1027,7 +1028,7 @@ for (int x = 0; x < sizeof(numbers) - 1; x++) {
 | Arrays (1D, multi-dimensional)                   | ✅ RAM / ROM support (`const` arrays stored in ROM)         |
 | Functions & recursion                            | ✅ Stack-based calls with frame pointer                     |
 | Control flow (`if`, loops, `switch`, `goto`)     | ✅ Loops require braces                                     |
-| Operators (unary, binary, ternary, cast, sizeof) | ✅ Full support                                             |
+| Operators (unary, binary, ternary, cast, sizeof) | ✅ Signed/unsigned 16-bit arithmetic and comparisons        |
 | Inline Assembly (multi-line)                     | ✅ Supported via `asm("...")` blocks                        |
 | `const` variables                                | ✅ Read-only; accessed directly from ROM                    |
 | `static` variables                               | ✅ Persistent; initialized once via compiler-generated flag |
@@ -1038,7 +1039,7 @@ for (int x = 0; x < sizeof(numbers) - 1; x++) {
 | Dereference (`*expr`)                            | ✅ On any expression                                        |
 | String ↔ char* casts                             | ✅ Implicit both ways                                       |
 | Arrays of strings                                | ✅ Supported (array of pointers to `char[]`)                |
-| Unsigned integers only                           | ⚠️ Work in progress                                         | 
+| Signed and unsigned integers (`int` / `uint`)    | ✅ 16-bit arithmetic, division, modulo, shifts and ordering |
 | Structs, long, decimal                           | ⚠️ Work in progress                                         | 
 | Constant expression evaluation                   | ❌ Not yet supported                                        |
 | Enum types                                       | ❌ Not supported                                            |

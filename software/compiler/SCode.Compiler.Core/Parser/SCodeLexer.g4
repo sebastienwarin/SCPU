@@ -31,6 +31,7 @@ GOTO       : 'goto';
 INCLUDE    : 'include';
 IF         : 'if';
 INT        : 'int';
+UINT       : 'uint';
 LONG       : 'long';
 NEW        : 'new';
 NULL       : 'null';

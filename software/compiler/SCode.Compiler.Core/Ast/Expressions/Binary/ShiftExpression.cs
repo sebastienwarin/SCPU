@@ -14,7 +14,14 @@ namespace SCode.Compiler.Ast.Expressions.Binary
                     break;
 
                 case ShiftOperator.RightShift:
-                    BuildShiftInstructions(rightOperand, builder => builder.EmitLogicalShiftRightA());
+                    if (LeftOperand.GetResultType().TypeCode == Type.SCodeType.Int)
+                    {
+                        BuildArithmeticShiftRight(rightOperand);
+                    }
+                    else
+                    {
+                        BuildShiftInstructions(rightOperand, builder => builder.EmitLogicalShiftRightA());
+                    }
                     break;
             }
         }
@@ -69,6 +76,49 @@ namespace SCode.Compiler.Ast.Expressions.Binary
                     builderAction(Context.InstructionBuilder);
                 }
             }
+        }
+
+        private void BuildArithmeticShiftRight(ValueOrAddress valueOrAddress)
+        {
+            var builder = Context.InstructionBuilder;
+            var value = Context.TemporaryVariables.Create();
+            var index = Context.TemporaryVariables.Create();
+            var mask = Context.TemporaryVariables.Create();
+            var loopLabel = RandomGenerator.RandomStringLabel("ashr_loop");
+            var exitLabel = RandomGenerator.RandomStringLabel("ashr_exit");
+
+            builder.EmitStoreA(value);
+
+            // The sign never changes during an arithmetic shift, so capture the fill bit once.
+            // value & 0x8000 is already the sign bit (0x8000 or 0), so 'OR mask' fills it back cheaply.
+            builder.EmitLoadA(value);
+            builder.EmitAnd(unchecked((short)0x8000));
+            builder.EmitStoreA(mask);
+
+            if (!string.IsNullOrEmpty(valueOrAddress.Address))
+            {
+                builder.EmitMove(valueOrAddress.Address, index);
+            }
+            else
+            {
+                builder.EmitMove(valueOrAddress.Value, index);
+            }
+
+            builder.SetLabel(loopLabel);
+            builder.EmitLoadA(index);
+            builder.EmitJumpIfZero(exitLabel);
+
+            builder.EmitLoadA(value);
+            builder.EmitLogicalShiftRightA();
+            builder.EmitOr(mask);
+            builder.EmitStoreA(value);
+
+            builder.EmitDecrement(index);
+            builder.EmitStoreA(index);
+            builder.EmitJump(loopLabel);
+
+            builder.SetLabel(exitLabel);
+            builder.EmitLoadA(value);
         }
     }
 }

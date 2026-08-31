@@ -3,12 +3,13 @@
     public enum SCodeType
     {
         Empty = 0,
-        Int = 1,
-        Char = 2,
-        Decimal = 3,
-        Long = 4,
-        Bool = 5,
-        String = 6,
-        Custom = 7,
+        Int,
+        UInt,
+        Char,
+        Decimal,
+        Long,
+        Bool,
+        String,
+        Custom
     }
 }

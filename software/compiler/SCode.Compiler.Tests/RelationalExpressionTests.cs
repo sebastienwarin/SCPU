@@ -147,5 +147,41 @@ namespace SCode.Compiler.Tests
                 assert(((f ? 1 : 0) >= 1) == false);
             ");
         }
+
+        [Fact]
+        public async Task Int_UsesSignedOrdering()
+        {
+            await SCodeRunner.ExecuteCodeAsync(@"
+                int negative = -1;
+                int minimum = -32768;
+                int maximum = 32767;
+
+                assert(negative < 2);
+                assert(minimum < negative);
+                assert(maximum > negative);
+                assert(negative <= -1);
+                assert(negative >= -1);
+            ");
+        }
+
+        [Fact]
+        public async Task UInt_UsesUnsignedOrdering()
+        {
+            await SCodeRunner.ExecuteCodeAsync(@"
+                uint value = 0xFFFF;
+                uint zero = 0;
+
+                assert(value > 2);
+                assert(value >= 0xFFFF);
+                assert(zero < value);
+                assert((value < 2) == false);
+
+                uint count = 0;
+                for (uint i = 0; i < 3; i++) {
+                    count++;
+                }
+                assert(count == 3);
+            ");
+        }
     }
 }

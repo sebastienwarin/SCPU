@@ -11,28 +11,35 @@ namespace SCode.Compiler.Ast.Expressions.Binary
         {
             var builder = Context.InstructionBuilder;
 
-            // Generate labels
-            var labelTrue = RandomGenerator.RandomStringLabel("case_true");
-            var labelFalse = RandomGenerator.RandomStringLabel("case_false");
-            var labelExit = RandomGenerator.RandomStringLabel("exit");
-
             // Compare Left & Right operands with a subtraction
             builder.EmitSubtract(rightOperand); // Assume Acc=Left
 
             // Build the boolean expression
-            BuildBooleanBinaryExpression(rightOperand, labelTrue, labelFalse, labelExit);
+            EmitBooleanResult(labels =>
+                BuildBooleanBinaryExpression(rightOperand, labels.labelTrue, labels.labelFalse, labels.labelExit));
+        }
+
+        protected void EmitBooleanResult(Action<(string labelTrue, string labelFalse, string labelExit)> buildComparison)
+        {
+            var builder = Context.InstructionBuilder;
+            var labels = (
+                labelTrue: RandomGenerator.RandomStringLabel("case_true"),
+                labelFalse: RandomGenerator.RandomStringLabel("case_false"),
+                labelExit: RandomGenerator.RandomStringLabel("exit"));
+
+            buildComparison(labels);
 
             // Return True (#1)
-            builder.SetLabel(labelTrue);
+            builder.SetLabel(labels.labelTrue);
             builder.EmitLoadA(1);
-            builder.EmitJump(labelExit);
+            builder.EmitJump(labels.labelExit);
 
             // Return False (#0)
-            builder.SetLabel(labelFalse);
+            builder.SetLabel(labels.labelFalse);
             builder.EmitClearA();
 
             // End
-            builder.SetLabel(labelExit);
+            builder.SetLabel(labels.labelExit);
         }
 
         public override TypeInfo GetResultType()

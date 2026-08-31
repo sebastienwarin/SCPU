@@ -7,6 +7,19 @@ namespace SCode.Compiler.Ast.Expressions.Binary
     {
         protected override void BuildBinaryExpression(ValueOrAddress rightOperand)
         {
+            if (IsSignedIntegerOperation())
+            {
+                BuildSignedOperation(rightOperand);
+            }
+            else
+            {
+                BuildUnsignedOperation(rightOperand);
+            }
+        }
+
+        // Unsigned core: A = A op rightOperand (result left in A). Reused by the signed wrapper.
+        private void BuildUnsignedOperation(ValueOrAddress rightOperand)
+        {
             var builder = Context.InstructionBuilder;
 
             // Generate labels
@@ -79,6 +92,67 @@ namespace SCode.Compiler.Ast.Expressions.Binary
 
             // Exit
             builder.SetLabel(labelExit);
+        }
+
+        // Signed wrapper: work on absolute values, run the unsigned core, then restore the sign.
+        private void BuildSignedOperation(ValueOrAddress rightOperand)
+        {
+            var builder = Context.InstructionBuilder;
+            var left = Context.TemporaryVariables.Create();
+            var right = Context.TemporaryVariables.Create();
+            var negate = Context.TemporaryVariables.Create();
+            var result = Context.TemporaryVariables.Create();
+
+            var leftPositive = RandomGenerator.RandomStringLabel("signed_left_positive");
+            var rightPositive = RandomGenerator.RandomStringLabel("signed_right_positive");
+            var resultPositive = RandomGenerator.RandomStringLabel("signed_result_positive");
+
+            // Save operands and reset the result-sign flag
+            builder.EmitStoreA(left);
+            builder.EmitLoadA(rightOperand);
+            builder.EmitStoreA(right);
+            builder.EmitClearA();
+            builder.EmitStoreA(negate);
+
+            // abs(left); the left/dividend sign always drives the result sign.
+            // ADD #0x8000 sets the carry exactly when the value is negative (1 word, no XOR/AND).
+            builder.EmitLoadA(left);
+            builder.EmitAdd(unchecked((short)0x8000));
+            builder.EmitJumpIfCarryClear(leftPositive);
+            builder.EmitLoadA(left);
+            builder.EmitNegateA();
+            builder.EmitStoreA(left);
+            builder.EmitMove(1, negate);
+            builder.SetLabel(leftPositive);
+
+            // abs(right); for * and / the divisor sign flips the result sign, for % it does not.
+            builder.EmitLoadA(right);
+            builder.EmitAdd(unchecked((short)0x8000));
+            builder.EmitJumpIfCarryClear(rightPositive);
+            builder.EmitLoadA(right);
+            builder.EmitNegateA();
+            builder.EmitStoreA(right);
+            if (Operator != MultiplicativeOperator.Modulus)
+            {
+                builder.EmitLoadA(1);
+                builder.EmitSubtract(negate);   // negate = 1 - negate (toggle 0 <-> 1)
+                builder.EmitStoreA(negate);
+            }
+            builder.SetLabel(rightPositive);
+
+            // Unsigned core on the absolute values
+            builder.EmitLoadA(left);
+            BuildUnsignedOperation(right);
+            builder.EmitStoreA(result);
+
+            // Restore the sign
+            builder.EmitLoadA(negate);
+            builder.EmitJumpIfZero(resultPositive);
+            builder.EmitLoadA(result);
+            builder.EmitNegateA();
+            builder.EmitStoreA(result);
+            builder.SetLabel(resultPositive);
+            builder.EmitLoadA(result);
         }
     }
 }

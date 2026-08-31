@@ -349,12 +349,12 @@ namespace SCode.Compiler.Ast
             if (context != null)
             {
                 var source = SourceRange.FromParserContext(context);
-                if (context.INT() is { })
+                if (context.integerType() is { } integerType)
                 {
                     return new VariableDeclarationStatement
                     {
                         Source = source,
-                        Type = new TypeDescriptor { IsBaseType = true, Name = "int", Source = source },
+                        Type = new TypeDescriptor { IsBaseType = true, Name = integerType.GetText(), Source = source },
                         Variables =
                         [
                             new() {

@@ -200,7 +200,7 @@ programs for the S-CPU.
 * Compiles S-Code, a **high-level language inspired by C and C#**, designed specifically for the S-CPU.
 * Implements the compiler logic: ANTLR grammar, lexer, parser, semantic analysis, and assembly generator.
 * Command-line tool that compiles `.scode` sources into S-CPU assembly or binary outputs.
-* xUnit test suite (250+ tests) covering control flow, functions, expressions, and error handling.
+* xUnit test suite (260+ tests) covering control flow, functions, expressions, and error handling.
 
 [📘 Read the Compiler Documentation](./software/compiler/README.md)
 

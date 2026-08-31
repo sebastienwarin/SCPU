@@ -98,5 +98,31 @@ namespace SCode.Compiler.Ast.Expressions
             }
             return resultType;
         }
+
+        // True when the operation must use signed 16-bit integer semantics.
+        // Integer literals are sign-neutral: an explicit signed int makes it signed, otherwise a uint/char keeps it unsigned.
+        protected bool IsSignedIntegerOperation()
+        {
+            var left = LeftOperand.GetResultType();
+            var right = RightOperand.GetResultType();
+            if (!IsIntegerFamily(left) || !IsIntegerFamily(right))
+            {
+                return false;
+            }
+
+            bool leftSigned = left.TypeCode == SCodeType.Int && LeftOperand is not LiteralExpression;
+            bool rightSigned = right.TypeCode == SCodeType.Int && RightOperand is not LiteralExpression;
+            if (leftSigned || rightSigned)
+            {
+                return true;
+            }
+
+            bool anyUnsigned = left.TypeCode is SCodeType.UInt or SCodeType.Char
+                            || right.TypeCode is SCodeType.UInt or SCodeType.Char;
+            return !anyUnsigned;
+        }
+
+        private static bool IsIntegerFamily(TypeInfo type) => !type.IsPointer &&
+            type.TypeCode is SCodeType.Int or SCodeType.UInt or SCodeType.Char;
     }
 }
